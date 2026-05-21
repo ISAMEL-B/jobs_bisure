@@ -4,10 +4,17 @@
 // DATABASE SETTINGS
 // =========================
 
+// Local Connection
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'job_aggregator');
 define('DB_USER', 'root');
 define('DB_PASS', '');
+
+// Online Connection
+// define('DB_HOST', 'sql113.byethost13.com');
+// define('DB_NAME', 'b13_39257326_job_aggregator');
+// define('DB_USER', 'b13_39257326');
+// define('DB_PASS', 'Bi0757003628');
 
 // =========================
 // SITE SETTINGS

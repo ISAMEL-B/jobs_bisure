@@ -332,79 +332,6 @@ $totalEmails = $db->query("SELECT COUNT(*) total FROM email_logs")->fetch()['tot
         box-shadow: var(--shadow-md);
     }
 
-    /* Quick Actions Grid */
-    .actions-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-    }
-
-    .action-card {
-        background: var(--bg-light);
-        border: 1px solid #E8E8F0;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        transition: 0.3s;
-        text-decoration: none;
-        display: block;
-    }
-
-    .action-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-md);
-        border-color: var(--primary);
-    }
-
-    .action-icon {
-        width: 60px;
-        height: 60px;
-        margin: 0 auto 15px;
-        background: var(--gradient-1);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .action-icon i {
-        font-size: 28px;
-        color: white;
-    }
-
-    .action-title {
-        font-weight: 700;
-        color: var(--dark);
-        margin-bottom: 5px;
-    }
-
-    .action-desc {
-        font-size: 12px;
-        color: #636E72;
-    }
-
-    .action-card.success .action-icon { background: linear-gradient(135deg, #00B894, #00CEC9); }
-    .action-card.warning .action-icon { background: linear-gradient(135deg, #FDCB6E, #FD79A8); }
-    .action-card.dark .action-icon { background: linear-gradient(135deg, #2D3436, #636E72); }
-    .action-card.primary .action-icon { background: var(--gradient-1); }
-
-    @media (max-width: 768px) {
-        .main-wrapper {
-            padding: 15px;
-        }
-
-        .page_heading {
-            flex-direction: column;
-            gap: 10px;
-            text-align: center;
-            font-size: 18px;
-            padding: 15px;
-        }
-
-        .actions-grid {
-            grid-template-columns: 1fr;
-        }
-    }
 </style>
 
 <div class="main-wrapper">
@@ -597,48 +524,6 @@ $totalEmails = $db->query("SELECT COUNT(*) total FROM email_logs")->fetch()['tot
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="settings-card">
-        <div class="card-header-custom">
-            <h4><i class="bi bi-lightning-charge-fill me-2"></i> Quick Actions</h4>
-        </div>
-        <div class="card-body" style="padding: 25px;">
-            <div class="actions-grid">
-                <a href="../run_scraper.php" class="action-card success">
-                    <div class="action-icon">
-                        <i class="bi bi-cloud-download"></i>
-                    </div>
-                    <div class="action-title">Run Scraper</div>
-                    <div class="action-desc">Manually trigger job scraping</div>
-                </a>
-
-                <a href="../send_emails.php" class="action-card warning">
-                    <div class="action-icon">
-                        <i class="bi bi-envelope"></i>
-                    </div>
-                    <div class="action-title">Send Emails</div>
-                    <div class="action-desc">Send job alerts to subscribers</div>
-                </a>
-
-                <a href="../cron.php" class="action-card dark">
-                    <div class="action-icon">
-                        <i class="bi bi-arrow-repeat"></i>
-                    </div>
-                    <div class="action-title">Run Full Cron</div>
-                    <div class="action-desc">Execute all scheduled tasks</div>
-                </a>
-
-                <a href="subscribe.php" class="action-card primary">
-                    <div class="action-icon">
-                        <i class="bi bi-person-plus"></i>
-                    </div>
-                    <div class="action-title">Add Subscriber</div>
-                    <div class="action-desc">Manually add a new subscriber</div>
-                </a>
-            </div>
         </div>
     </div>
 

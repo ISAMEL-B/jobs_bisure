@@ -35,6 +35,17 @@ if (!defined('MY_BASE_URL')) {
             : 'https://bisurejobs.22web.org'
     );
 }
+
+// =============================================================
+// DETERMINE CURRENT PAGE FOR ACTIVE MENU STATE
+// =============================================================
+$currentPage = basename($_SERVER['PHP_SELF']);
+$currentDir = basename(dirname($_SERVER['PHP_SELF']));
+
+$siteName = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'site_name' LIMIT 1")->fetchColumn();
+if (!$siteName) {
+    $siteName = 'BISure Jobs';
+}
 ?>
 
 <!DOCTYPE html>
@@ -122,6 +133,14 @@ if (!defined('MY_BASE_URL')) {
             min-width: 0;
         }
 
+        /* Logo and System Name Container */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
         .jl-logo {
             display: flex;
             align-items: center;
@@ -137,6 +156,16 @@ if (!defined('MY_BASE_URL')) {
             height: 42px;
             width: auto;
             display: block;
+        }
+
+        .system-name {
+            font-size: 18px;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.5px;
         }
 
         /* Header Statistics - Desktop */
@@ -205,7 +234,7 @@ if (!defined('MY_BASE_URL')) {
             color: var(--dark);
         }
 
-        /* Admin Info */
+        /* Admin Info - Desktop */
         .admin-info {
             display: flex;
             align-items: center;
@@ -225,7 +254,19 @@ if (!defined('MY_BASE_URL')) {
             font-weight: 600;
             font-size: 13px;
         }
-        /* Mobile Admin Info */
+
+        /* Mobile System Name (Left side) */
+        .mobile-system-name {
+            display: none;
+            font-size: 14px;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Mobile Admin Info (Right side before hamburger) */
         .mobile-admin-info {
             display: none;
             align-items: center;
@@ -234,17 +275,16 @@ if (!defined('MY_BASE_URL')) {
             padding: 6px 12px;
             border-radius: 25px;
             border: 1px solid #E8E8F0;
-            margin-right: auto;
-            margin-left: 10px;
+            margin-left: auto;
         }
 
         .mobile-admin-info i {
             color: var(--primary);
-            font-size: 16px;
+            font-size: 14px;
         }
 
         .mobile-admin-info span {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--dark);
         }
@@ -313,29 +353,13 @@ if (!defined('MY_BASE_URL')) {
 
         .mobile-stat-icon i {
             font-size: 18px;
-            /* color: blue; */
         }
 
-        /* Mobile Statistics Icon Colors */
-        .mobile-stat-icon.blue {
-            background: var(--primary);
-        }
-
-        .mobile-stat-icon.green {
-            background: var(--success);
-        }
-
-        .mobile-stat-icon.red {
-            background: var(--danger);
-        }
-
-        .mobile-stat-icon.orange {
-            background: #d97706;
-        }
-
-        .mobile-stat-icon.purple {
-            background: #7c3aed;
-        }
+        .mobile-stat-icon.blue { background: var(--primary); }
+        .mobile-stat-icon.green { background: var(--success); }
+        .mobile-stat-icon.red { background: var(--danger); }
+        .mobile-stat-icon.orange { background: #d97706; }
+        .mobile-stat-icon.purple { background: #7c3aed; }
 
         .mobile-stat-info {
             display: flex;
@@ -357,7 +381,7 @@ if (!defined('MY_BASE_URL')) {
             line-height: 1.2;
         }
 
-        /* Desktop Navigation */
+        /* Desktop Navigation - With Active State Styling */
         .g-main-nav {
             width: 100%;
         }
@@ -396,6 +420,17 @@ if (!defined('MY_BASE_URL')) {
             font-size: 14px;
         }
 
+        /* Active Menu Item - Green Background with White Text */
+        .g-main-nav .g-menu-item.active .g-menu-item-container {
+            background: var(--success);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .g-main-nav .g-menu-item.active .g-menu-item-container i {
+            color: white;
+        }
+
         .g-main-nav .g-menu-item-container::before {
             content: '';
             position: absolute;
@@ -417,6 +452,28 @@ if (!defined('MY_BASE_URL')) {
 
         .g-main-nav .g-menu-item-container:hover::before {
             left: 0;
+        }
+
+        /* Active item hover override */
+        .g-main-nav .g-menu-item.active .g-menu-item-container:hover {
+            background: var(--success);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .g-main-nav .g-menu-item.active .g-menu-item-container:hover::before {
+            display: none;
+        }
+
+        /* Mobile Menu Active State */
+        .mobile-menu-items .g-menu-item.active .g-menu-item-container {
+            background: #F0EDFF;
+            color: var(--primary);
+            border-left: 3px solid var(--success);
+        }
+
+        .mobile-menu-items .g-menu-item.active .g-menu-item-container i {
+            color: var(--success);
         }
 
         /* Mobile Menu */
@@ -602,6 +659,9 @@ if (!defined('MY_BASE_URL')) {
             .header-stat-number {
                 font-size: 12px;
             }
+            .system-name {
+                font-size: 14px;
+            }
         }
 
         @media (max-width: 991px) {
@@ -623,6 +683,21 @@ if (!defined('MY_BASE_URL')) {
             .mobile-stats-wrapper {
                 display: block;
             }
+            /* Show mobile system name on left */
+            .mobile-system-name {
+                display: block;
+            }
+            /* Show mobile admin info on right before hamburger */
+            .mobile-admin-info {
+                display: flex;
+            }
+            /* Hide desktop system name on mobile */
+            .system-name {
+                display: none;
+            }
+            .logo-container {
+                flex: 1;
+            }
         }
 
         @media (max-width: 576px) {
@@ -631,12 +706,12 @@ if (!defined('MY_BASE_URL')) {
                 left: -280px;
             }
             .jl-logo img {
-                height: 36px;
+                height: 32px;
             }
             .mobile-menu-toggle {
-                width: 40px;
-                height: 40px;
-                font-size: 18px;
+                width: 38px;
+                height: 38px;
+                font-size: 16px;
             }
             .mobile-stat-item {
                 padding: 6px 12px;
@@ -655,6 +730,15 @@ if (!defined('MY_BASE_URL')) {
             .mobile-stat-label {
                 font-size: 10px;
             }
+            .mobile-admin-info {
+                padding: 5px 10px;
+            }
+            .mobile-admin-info span {
+                font-size: 10px;
+            }
+            .mobile-system-name {
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -664,20 +748,22 @@ if (!defined('MY_BASE_URL')) {
     <header id="g-header">
         <div class="g-container">
             <div class="g-grid">
-                <!-- Logo -->
+                <!-- Logo and System Name - Left side -->
                 <div class="g-block">
-                    <a class="jl-logo" href="/jobaggregator/index.php">
-                        <img src="/jobaggregator/bisure-jobs-logo.png" alt="BISure Jobs" style="height:40px;">
+                    <a class="logo-container" href="<?= MY_BASE_URL ?>/index.php">
+                        <div class="jl-logo">
+                            <img src="<?= MY_BASE_URL ?>/bisure-jobs-logo.png" alt="<?= htmlspecialchars($siteName) ?>" style="height:42px;">
+                        </div>
+                        <span class="system-name hidden-phone"><?= htmlspecialchars($siteName) ?></span>
                     </a>
                 </div>
 
-                <!-- Mobile Admin Info -->
-                <div class="mobile-admin-info visible-phone">
-                    <i class="bi bi-person-circle"></i>
-                    <span><?= htmlspecialchars($adminName) ?></span>
+                <!-- Mobile System Name (Left side, visible only on mobile) -->
+                <div class="mobile-system-name visible-phone">
+                    <?= htmlspecialchars($siteName) ?>
                 </div>
 
-                <!-- Statistics - Desktop (Between Logo and Admin) -->
+                <!-- Statistics - Desktop (Center) -->
                 <div class="g-block hidden-phone">
                     <div class="header-stats">
                         <div class="header-stat-item">
@@ -715,11 +801,10 @@ if (!defined('MY_BASE_URL')) {
                                 <span class="header-stat-number"><?= number_format($totalCategories) ?></span>
                             </div>
                         </div>
-                        
                     </div>
                 </div>
 
-                <!-- Admin Info - Desktop -->
+                <!-- Admin Info - Desktop (Right side) -->
                 <div class="g-block hidden-phone">
                     <div class="admin-info">
                         <i class="bi bi-person-circle"></i>
@@ -727,7 +812,13 @@ if (!defined('MY_BASE_URL')) {
                     </div>
                 </div>
 
-                <!-- Mobile Menu Button -->
+                <!-- Mobile Admin Info (Right side before hamburger) -->
+                <div class="mobile-admin-info visible-phone">
+                    <i class="bi bi-person-circle"></i>
+                    <span><?= htmlspecialchars($adminName) ?></span>
+                </div>
+
+                <!-- Mobile Menu Button (Hamburger) -->
                 <button class="mobile-menu-toggle visible-phone" id="mobileMenuToggle">
                     <i class="bi bi-list"></i>
                 </button>
@@ -773,7 +864,6 @@ if (!defined('MY_BASE_URL')) {
                     <span class="mobile-stat-number"><?= number_format($totalCategories) ?></span>
                 </div>
             </div>
-            
         </div>
     </div>
 
@@ -784,49 +874,49 @@ if (!defined('MY_BASE_URL')) {
                 <div class="g-block size-100">
                     <nav class="g-main-nav">
                         <ul class="g-toplevel">
-                            <li class="g-menu-item">
+                            <li class="g-menu-item <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
                                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/index.php">
                                     <i class="bi bi-speedometer2"></i> DASHBOARD
                                 </a>
                             </li>
 
-                            <li class="g-menu-item">
+                            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'quick_actions.php') !== false ? 'active' : '' ?>">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/scrapers/quick_actions.php">
+                                    <i class="bi bi-lightning-charge-fill"></i> QUICK ACTIONS
+                                </a>
+                            </li>
+
+                            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'users.php') !== false ? 'active' : '' ?>">
                                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/users.php">
                                     <i class="bi bi-person-badge-fill"></i> SYSTEM USERS
                                 </a>
                             </li>
 
-                            <li class="g-menu-item">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/send_emails.php">
-                                    <i class="bi bi-envelope-paper"></i> SEND EMAILS
-                                </a>
-                            </li>
-
-                            <li class="g-menu-item">
+                            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'subscribe.php') !== false ? 'active' : '' ?>">
                                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/subscribe.php">
                                     <i class="bi bi-people-fill"></i> SUBSCRIBERS
                                 </a>
                             </li>
 
-                            <li class="g-menu-item">
+                            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'jobs.php') !== false ? 'active' : '' ?>">
                                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/jobs.php">
                                     <i class="bi bi-briefcase-fill"></i> MANAGE JOBS
                                 </a>
                             </li>
 
-                            <li class="g-menu-item">
+                            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'categories.php') !== false ? 'active' : '' ?>">
                                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/categories.php">
                                     <i class="bi bi-folder-fill"></i> CATEGORIES
                                 </a>
                             </li>
 
-                            <li class="g-menu-item">
+                            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'settings.php') !== false ? 'active' : '' ?>">
                                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/settings.php">
                                     <i class="bi bi-gear-fill"></i> SETTINGS
                                 </a>
                             </li>
 
-                            <li class="g-menu-item">
+                            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'password_recovery.php') !== false ? 'active' : '' ?>">
                                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/mailing/password_recovery.php">
                                     <i class="bi bi-shield-lock-fill"></i> CHANGE PASSWORD
                                 </a>
@@ -850,57 +940,55 @@ if (!defined('MY_BASE_URL')) {
     <div class="mobile-menu-panel" id="mobileMenuPanel">
         <div class="mobile-menu-header">
             <h3><i class="bi bi-grid-fill"></i> Menu</h3>
-
             <button class="mobile-menu-close" id="mobileMenuClose">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
 
         <ul class="mobile-menu-items">
-
-            <li class="g-menu-item">
+            <li class="g-menu-item <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/index.php">
                     <i class="bi bi-speedometer2"></i> DASHBOARD
                 </a>
             </li>
 
-            <li class="g-menu-item">
+            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'quick_actions.php') !== false ? 'active' : '' ?>">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/scrapers/quick_actions.php">
+                    <i class="bi bi-lightning-charge-fill"></i> QUICK ACTIONS
+                </a>
+            </li>
+
+            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'users.php') !== false ? 'active' : '' ?>">
                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/users.php">
                     <i class="bi bi-person-badge-fill"></i> SYSTEM USERS
                 </a>
             </li>
 
-            <li class="g-menu-item">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/send_emails.php">
-                    <i class="bi bi-envelope-paper"></i> SEND EMAILS
-                </a>
-            </li>
-
-            <li class="g-menu-item">
+            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'subscribe.php') !== false ? 'active' : '' ?>">
                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/subscribe.php">
                     <i class="bi bi-people-fill"></i> SUBSCRIBERS
                 </a>
             </li>
 
-            <li class="g-menu-item">
+            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'jobs.php') !== false ? 'active' : '' ?>">
                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/jobs.php">
                     <i class="bi bi-briefcase-fill"></i> MANAGE JOBS
                 </a>
             </li>
 
-            <li class="g-menu-item">
+            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'categories.php') !== false ? 'active' : '' ?>">
                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/categories.php">
                     <i class="bi bi-folder-fill"></i> CATEGORIES
                 </a>
             </li>
 
-            <li class="g-menu-item">
+            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'settings.php') !== false ? 'active' : '' ?>">
                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/settings.php">
                     <i class="bi bi-gear-fill"></i> SETTINGS
                 </a>
             </li>
 
-            <li class="g-menu-item">
+            <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'password_recovery.php') !== false ? 'active' : '' ?>">
                 <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/mailing/password_recovery.php">
                     <i class="bi bi-shield-lock-fill"></i> CHANGE PASSWORD
                 </a>
@@ -911,7 +999,6 @@ if (!defined('MY_BASE_URL')) {
                     <i class="bi bi-box-arrow-right"></i> LOGOUT
                 </a>
             </li>
-
         </ul>
     </div>
 

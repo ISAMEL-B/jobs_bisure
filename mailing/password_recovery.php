@@ -691,7 +691,7 @@ if (isset($_SESSION['code_expiry'])) {
                             <i class="bi bi-send-fill"></i> Send Verification Code
                         </button>
 
-                        <button type="button" onclick="window.location.href='../security/signin.php'" class="btn-recovery btn-secondary">
+                        <button type="button" onclick="window.location.href='../index.php'" class="btn-recovery btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back to Login
                         </button>
                     </form>

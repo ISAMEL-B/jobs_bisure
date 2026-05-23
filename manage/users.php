@@ -30,7 +30,6 @@ $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
 // =============================================================
 // INCLUDE EXTERNAL HEADER & NAVIGATION FROM bars/
 // =============================================================
-require_once __DIR__ . '/../bars/head_nav.php';
 ?>
 
 <?php
@@ -688,7 +687,7 @@ $number = ($page - 1) * $perPage + 1;
         border-radius: 14px 14px 0 0;
     }
 </style>
-
+<?php require_once __DIR__ . '/../bars/head_nav.php'; ?>
 <div class="main-wrapper">
     <!-- Page Heading -->
     <div class="page_heading">
@@ -896,7 +895,7 @@ $number = ($page - 1) * $perPage + 1;
                     <div class="user-bottomrow">
                         <div class="user-actions">
                             <a href="?toggle=<?= $user['id'] ?>" class="user-button user-button-warning">
-                                <i class="bi bi-arrow-repeat"></i> Toggle Status
+                                <i class="bi bi-arrow-repeat"></i> Change Status
                             </a>
                             <button class="user-button" data-bs-toggle="modal" data-bs-target="#passwordModal<?= $user['id'] ?>">
                                 <i class="bi bi-key"></i> Change Password

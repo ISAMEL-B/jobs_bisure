@@ -30,7 +30,6 @@ $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
 // =============================================================
 // INCLUDE EXTERNAL HEADER & NAVIGATION FROM bars/
 // =============================================================
-require_once __DIR__ . '/../bars/head_nav.php';
 ?>
 
 <?php
@@ -566,6 +565,8 @@ $totalSubscribers = $db->query("SELECT COUNT(*) total FROM subscribers")->fetch(
         }
     }
 </style>
+
+<?php require_once __DIR__ . '/../bars/head_nav.php'; ?>
 
 <div class="main-wrapper">
     <!-- Page Heading -->

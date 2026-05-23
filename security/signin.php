@@ -1,4 +1,7 @@
 <?php
+// =============================================================
+// LOGIN PAGE - No header/nav include (separate design)
+// =============================================================
 
 session_start();
 
@@ -14,25 +17,13 @@ $db = Database::connect();
 
 function getSetting($db, $key, $default = '')
 {
-    $stmt = $db->prepare("
-        SELECT setting_value
-        FROM settings
-        WHERE setting_key = ?
-        LIMIT 1
-    ");
-
+    $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1");
     $stmt->execute([$key]);
-
     $setting = $stmt->fetch();
-
     return $setting['setting_value'] ?? $default;
 }
 
-$siteName = getSetting(
-    $db,
-    'site_name',
-    'Uganda Job Aggregator'
-);
+$siteName = getSetting($db, 'site_name', 'BISure Jobs');
 
 /*
 |--------------------------------------------------------------------------
@@ -43,860 +34,569 @@ $siteName = getSetting(
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
 
     if (empty($email) || empty($password)) {
-
         $error = "Please fill in all fields.";
-
     } else {
-
-        $stmt = $db->prepare("
-            SELECT *
-            FROM users
-            WHERE email = ?
-            LIMIT 1
-        ");
-
+        $stmt = $db->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
         $stmt->execute([$email]);
-
         $user = $stmt->fetch();
 
         if (!$user) {
-
             $error = "Invalid email or password.";
-
         } elseif ((int)$user['is_active'] !== 1) {
-
-            $error = "Your account has been deactivated.";
-
+            $error = "Your account has been deactivated. Please contact administrator.";
         } elseif (!password_verify($password, $user['password'])) {
-
             $error = "Invalid email or password.";
-
         } else {
-
-            /*
-            |--------------------------------------------------------------------------
-            | UPDATE LAST LOGIN
-            |--------------------------------------------------------------------------
-            */
-
-            $update = $db->prepare("
-                UPDATE users
-                SET last_login = NOW()
-                WHERE id = ?
-            ");
-
+            // Update last login
+            $update = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
             $update->execute([$user['id']]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | CREATE SESSION
-            |--------------------------------------------------------------------------
-            */
-
+            // Create session
             $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['full_name'];
+            $_SESSION['full_name'] = $user['full_name'];
             $_SESSION['user_email'] = $user['email'];
-            $_SESSION['role'] = $user['role'];
+            $_SESSION['user_role'] = $user['role'];
 
-            header("Location: ../index.php");
+            // Redirect to dashboard or stored page
+            $redirect = $_SESSION['redirect_after_login'] ?? '../index.php';
+            unset($_SESSION['redirect_after_login']);
+            header("Location: $redirect");
             exit;
         }
     }
 }
-
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en-GB" dir="ltr">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Secure login portal for BISure Jobs Admin Dashboard">
+    <title>Login | <?= htmlspecialchars($siteName) ?></title>
 
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-
-        Login | <?= htmlspecialchars($siteName) ?>
-
-    </title>
-
-    <!-- BOOTSTRAP -->
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
-
-    <!-- BOOTSTRAP ICONS -->
-
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-    >
-
-    <!-- GOOGLE FONT -->
-
-    <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-    >
-
-    <link
-        rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin
-    >
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
-
+    <!-- CSS Files -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <style>
-
-        :root{
-
-            --primary:#2563eb;
-            --primary-dark:#1d4ed8;
-
-            --secondary:#7c3aed;
-
-            --bg:#f1f5f9;
-
-            --card:#ffffff;
-
-            --text:#0f172a;
-
-            --muted:#64748b;
-
-            --border:#e2e8f0;
-
-            --input:#f8fafc;
-
-            --danger:#dc2626;
-
-            --success:#059669;
+        /* =========================================================
+        GLOBAL VARIABLES - Matching Main Site
+        ========================================================= */
+        :root {
+            --primary: #6C5CE7;
+            --primary-dark: #5A4BD1;
+            --secondary: #00CEC9;
+            --accent: #FD79A8;
+            --success: #00B894;
+            --warning: #FDCB6E;
+            --danger: #FF7675;
+            --dark: #2D3436;
+            --light: #DFE6E9;
+            --white: #FFFFFF;
+            --bg-light: #F8F9FE;
+            --shadow-sm: 0 2px 10px rgba(108, 92, 231, 0.1);
+            --shadow-md: 0 5px 20px rgba(108, 92, 231, 0.15);
+            --shadow-lg: 0 10px 30px rgba(108, 92, 231, 0.2);
+            --gradient-1: linear-gradient(135deg, #6C5CE7 0%, #00CEC9 100%);
+            --gradient-2: linear-gradient(135deg, #FD79A8 0%, #FDCB6E 100%);
         }
 
-        *{
-
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        body{
-
-            min-height:100vh;
-
-            font-family:'Inter',sans-serif;
-
-            background:
-                radial-gradient(
-                    circle at top right,
-                    rgba(124,58,237,0.15),
-                    transparent 30%
-                ),
-                radial-gradient(
-                    circle at bottom left,
-                    rgba(37,99,235,0.15),
-                    transparent 30%
-                ),
-                linear-gradient(
-                    135deg,
-                    #eff6ff,
-                    #f8fafc
-                );
-
-            display:flex;
-            align-items:center;
-            justify-content:center;
-
-            padding:40px 20px;
+        body {
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | LOGIN WRAPPER
-        |--------------------------------------------------------------------------
-        */
-
-        .login-wrapper{
-
-            width:100%;
-            max-width:1100px;
-
-            display:grid;
-            grid-template-columns:1fr 480px;
-
-            background:rgba(255,255,255,0.8);
-
-            backdrop-filter:blur(20px);
-
-            border-radius:30px;
-
-            overflow:hidden;
-
-            border:1px solid rgba(255,255,255,0.6);
-
-            box-shadow:
-                0 25px 60px rgba(15,23,42,0.12);
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(108, 92, 231, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 206, 201, 0.08) 0%, transparent 50%);
+            pointer-events: none;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | LEFT SIDE
-        |--------------------------------------------------------------------------
-        */
-
-        .login-left{
-
-            position:relative;
-
-            padding:70px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #2563eb,
-                    #1e40af,
-                    #7c3aed
-                );
-
-            color:#fff;
-
-            overflow:hidden;
+        /* Login Container */
+        .login-container {
+            width: 100%;
+            max-width: 1200px;
+            position: relative;
+            z-index: 1;
+            animation: fadeInUp 0.6s ease-out;
         }
 
-        .login-left::before{
-
-            content:'';
-
-            position:absolute;
-
-            width:420px;
-            height:420px;
-
-            border-radius:50%;
-
-            background:rgba(255,255,255,0.08);
-
-            top:-160px;
-            right:-140px;
-        }
-
-        .login-left::after{
-
-            content:'';
-
-            position:absolute;
-
-            width:300px;
-            height:300px;
-
-            border-radius:50%;
-
-            background:rgba(255,255,255,0.06);
-
-            bottom:-120px;
-            left:-100px;
-        }
-
-        .brand-area{
-
-            position:relative;
-            z-index:2;
-        }
-
-        .brand-logo{
-
-            width:85px;
-            height:85px;
-
-            border-radius:26px;
-
-            background:rgba(255,255,255,0.15);
-
-            display:flex;
-            align-items:center;
-            justify-content:center;
-
-            font-size:38px;
-
-            margin-bottom:30px;
-
-            backdrop-filter:blur(10px);
-        }
-
-        .brand-title{
-
-            font-size:44px;
-            font-weight:800;
-
-            line-height:1.1;
-
-            margin-bottom:18px;
-        }
-
-        .brand-description{
-
-            font-size:17px;
-            line-height:1.8;
-
-            color:rgba(255,255,255,0.88);
-
-            max-width:520px;
-        }
-
-        .feature-list{
-
-            margin-top:45px;
-
-            display:flex;
-            flex-direction:column;
-            gap:18px;
-        }
-
-        .feature-item{
-
-            display:flex;
-            align-items:center;
-            gap:15px;
-
-            font-size:15px;
-        }
-
-        .feature-icon{
-
-            width:42px;
-            height:42px;
-
-            border-radius:14px;
-
-            background:rgba(255,255,255,0.15);
-
-            display:flex;
-            align-items:center;
-            justify-content:center;
-
-            font-size:18px;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | RIGHT SIDE
-        |--------------------------------------------------------------------------
-        */
-
-        .login-right{
-
-            background:#fff;
-
-            padding:55px 45px;
-
-            display:flex;
-            flex-direction:column;
-            justify-content:center;
-        }
-
-        .login-top{
-
-            margin-bottom:35px;
-        }
-
-        .login-top h2{
-
-            font-size:32px;
-            font-weight:800;
-
-            color:var(--text);
-
-            margin-bottom:10px;
-        }
-
-        .login-top p{
-
-            color:var(--muted);
-
-            margin:0;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | ALERT
-        |--------------------------------------------------------------------------
-        */
-
-        .alert-modern{
-
-            border:none;
-
-            border-radius:18px;
-
-            padding:16px 18px;
-
-            display:flex;
-            align-items:center;
-            gap:12px;
-
-            margin-bottom:25px;
-        }
-
-        .alert-danger-modern{
-
-            background:#fef2f2;
-
-            color:#991b1b;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | FORM
-        |--------------------------------------------------------------------------
-        */
-
-        .form-label{
-
-            font-size:14px;
-            font-weight:600;
-
-            color:#334155;
-
-            margin-bottom:10px;
-        }
-
-        .input-group{
-
-            background:var(--input);
-
-            border:1px solid var(--border);
-
-            border-radius:18px;
-
-            overflow:hidden;
-
-            transition:0.3s;
-        }
-
-        .input-group:focus-within{
-
-            border-color:#2563eb;
-
-            box-shadow:
-                0 0 0 4px rgba(37,99,235,0.12);
-        }
-
-        .input-icon{
-
-            width:60px;
-
-            display:flex;
-            align-items:center;
-            justify-content:center;
-
-            color:#64748b;
-
-            font-size:18px;
-        }
-
-        .form-control{
-
-            border:none !important;
-
-            background:transparent !important;
-
-            height:60px;
-
-            font-size:15px;
-
-            box-shadow:none !important;
-        }
-
-        .form-control::placeholder{
-
-            color:#94a3b8;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | BUTTON
-        |--------------------------------------------------------------------------
-        */
-
-        .btn-login{
-
-            height:60px;
-
-            border:none;
-
-            border-radius:18px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #2563eb,
-                    #7c3aed
-                );
-
-            color:#fff;
-
-            font-size:16px;
-            font-weight:700;
-
-            transition:0.3s;
-
-            box-shadow:
-                0 15px 30px rgba(37,99,235,0.25);
-        }
-
-        .btn-login:hover{
-
-            transform:translateY(-2px);
-
-            box-shadow:
-                0 20px 35px rgba(37,99,235,0.30);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | LINKS
-        |--------------------------------------------------------------------------
-        */
-
-        .login-links{
-
-            margin-top:22px;
-
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-
-            flex-wrap:wrap;
-            gap:10px;
-        }
-
-        .login-links a{
-
-            text-decoration:none;
-
-            color:#2563eb;
-
-            font-weight:600;
-
-            transition:0.3s;
-        }
-
-        .login-links a:hover{
-
-            color:#1d4ed8;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | FOOTER
-        |--------------------------------------------------------------------------
-        */
-
-        .footer-text{
-
-            margin-top:35px;
-
-            text-align:center;
-
-            font-size:13px;
-
-            color:#94a3b8;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | MOBILE
-        |--------------------------------------------------------------------------
-        */
-
-        @media(max-width:992px){
-
-            .login-wrapper{
-
-                grid-template-columns:1fr;
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
             }
-
-            .login-left{
-
-                display:none;
-            }
-
-            .login-right{
-
-                padding:40px 28px;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
+        /* Login Card */
+        .login-card {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: var(--white);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(108, 92, 231, 0.1);
+        }
+
+        /* Left Side - Brand Section */
+        .login-brand {
+            background: var(--gradient-1);
+            padding: 50px 40px;
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-brand::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .brand-logo i {
+            font-size: 40px;
+            color: var(--white);
+        }
+
+        .brand-title {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+
+        .brand-description {
+            font-size: 15px;
+            line-height: 1.6;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .feature-icon {
+            width: 45px;
+            height: 45px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Right Side - Form Section */
+        .login-form {
+            padding: 50px 45px;
+            background: var(--white);
+        }
+
+        .form-header {
+            margin-bottom: 35px;
+        }
+
+        .form-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .form-header p {
+            color: #636E72;
+            font-size: 14px;
+        }
+
+        /* Alert Styles */
+        .alert-modern {
+            border: none;
+            border-radius: 14px;
+            padding: 15px 18px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: shake 0.5s ease-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .alert-danger-modern {
+            background: #FEE2E2;
+            color: #DC2626;
+            border-left: 4px solid #DC2626;
+        }
+
+        .alert-danger-modern i {
+            font-size: 20px;
+        }
+
+        /* Form Groups */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-label i {
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .form-control-login {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border: 2px solid #E8E8F0;
+            border-radius: 14px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: var(--bg-light);
+        }
+
+        .form-control-login:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+            background: var(--white);
+        }
+
+        .form-control-login::placeholder {
+            color: #B2BEC3;
+        }
+
+        /* Password Toggle */
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            cursor: pointer;
+            color: #B2BEC3;
+            transition: 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: var(--primary);
+        }
+
+        /* Login Button */
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: var(--gradient-1);
+            color: var(--white);
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        /* Links */
+        .login-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #E8E8F0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .login-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .login-links a:hover {
+            color: var(--primary-dark);
+            transform: translateX(3px);
+        }
+
+        /* Footer */
+        .login-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #E8E8F0;
+            font-size: 12px;
+            color: #B2BEC3;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .login-card {
+                grid-template-columns: 1fr;
+            }
+            
+            .login-brand {
+                display: none;
+            }
+            
+            .login-form {
+                padding: 40px 30px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .login-form {
+                padding: 30px 20px;
+            }
+            
+            .form-header h2 {
+                font-size: 24px;
+            }
+            
+            .login-links {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            
+            .login-links a {
+                justify-content: center;
+            }
+        }
     </style>
-
 </head>
-
 <body>
-
-<div class="login-wrapper">
-
-    <!-- LEFT PANEL -->
-
-    <div class="login-left">
-
-        <div class="brand-area">
-
-            <div class="brand-logo">
-
-                <i class="bi bi-briefcase-fill"></i>
-
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Left Side - Brand Section -->
+            <div class="login-brand">
+                <div class="brand-logo">
+                    <i class="bi bi-briefcase-fill"></i>
+                </div>
+                <h1 class="brand-title"><?= htmlspecialchars($siteName) ?></h1>
+                <p class="brand-description">
+                    Smart recruitment automation platform for scraping jobs, managing subscribers, sending email alerts, and controlling the entire job aggregation system professionally.
+                </p>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+                        <div class="feature-text">Automated Job Scraping</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="bi bi-envelope-paper-fill"></i></div>
+                        <div class="feature-text">Smart Email Notifications</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="bi bi-people-fill"></i></div>
+                        <div class="feature-text">Subscriber Management</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                        <div class="feature-text">Secure Admin Authentication</div>
+                    </div>
+                </div>
             </div>
 
-            <h1 class="brand-title">
-
-                <?= htmlspecialchars($siteName) ?>
-
-            </h1>
-
-            <p class="brand-description">
-
-                Smart recruitment automation platform for scraping jobs,
-                managing subscribers, sending email alerts,
-                and controlling the entire Uganda Job Aggregator system professionally.
-            </p>
-
-            <div class="feature-list">
-
-                <div class="feature-item">
-
-                    <div class="feature-icon">
-
-                        <i class="bi bi-lightning-charge-fill"></i>
-
-                    </div>
-
-                    <div>
-
-                        Automated Job Scraping
-
-                    </div>
-
+            <!-- Right Side - Form Section -->
+            <div class="login-form">
+                <div class="form-header">
+                    <h2>Welcome Back</h2>
+                    <p>Sign in to continue to your administration dashboard</p>
                 </div>
 
-                <div class="feature-item">
+                <?php if (!empty($error)): ?>
+                    <div class="alert-modern alert-danger-modern">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span><?= htmlspecialchars($error) ?></span>
+                    </div>
+                <?php endif; ?>
 
-                    <div class="feature-icon">
-
-                        <i class="bi bi-envelope-paper-fill"></i>
-
+                <form method="POST" action="">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="bi bi-envelope-fill"></i> Email Address
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="bi bi-envelope input-icon"></i>
+                            <input 
+                                type="email" 
+                                name="email" 
+                                class="form-control-login" 
+                                placeholder="admin@example.com"
+                                value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                                required
+                                autofocus
+                            >
+                        </div>
                     </div>
 
-                    <div>
-
-                        Smart Email Notifications
-
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="bi bi-lock-fill"></i> Password
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="bi bi-lock input-icon"></i>
+                            <input 
+                                type="password" 
+                                name="password" 
+                                id="password"
+                                class="form-control-login" 
+                                placeholder="Enter your password"
+                                required
+                            >
+                            <i class="bi bi-eye-slash password-toggle" id="togglePassword"></i>
+                        </div>
                     </div>
 
+                    <button type="submit" class="btn-login">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        Secure Login
+                    </button>
+                </form>
+
+                <div class="login-links">
+                    <a href="/jobaggregator/mailing/password_recovery.php">
+                        <i class="bi bi-key-fill"></i> Forgot Password?
+                    </a>
+                    <a href="#">
+                        <i class="bi bi-shield-check"></i> Secure Access
+                    </a>
                 </div>
 
-                <div class="feature-item">
-
-                    <div class="feature-icon">
-
-                        <i class="bi bi-people-fill"></i>
-
-                    </div>
-
-                    <div>
-
-                        Subscriber Management
-
-                    </div>
-
+                <div class="login-footer">
+                    <i class="bi bi-c-circle"></i> <?= date('Y') ?> <?= htmlspecialchars($siteName) ?> • All Rights Reserved
                 </div>
-
-                <div class="feature-item">
-
-                    <div class="feature-icon">
-
-                        <i class="bi bi-shield-lock-fill"></i>
-
-                    </div>
-
-                    <div>
-
-                        Secure Admin Authentication
-
-                    </div>
-
-                </div>
-
             </div>
-
         </div>
-
     </div>
 
-    <!-- RIGHT PANEL -->
-
-    <div class="login-right">
-
-        <div class="login-top">
-
-            <h2>
-
-                Welcome Back
-
-            </h2>
-
-            <p>
-
-                Sign in to continue to your administration dashboard.
-            </p>
-
-        </div>
-
-        <?php if (!empty($error)): ?>
-
-            <div class="alert-modern alert-danger-modern">
-
-                <i class="bi bi-exclamation-triangle-fill"></i>
-
-                <div>
-
-                    <?= htmlspecialchars($error) ?>
-
-                </div>
-
-            </div>
-
-        <?php endif; ?>
-
-        <!-- LOGIN FORM -->
-
-        <form method="POST">
-
-            <!-- EMAIL -->
-
-            <div class="mb-4">
-
-                <label class="form-label">
-
-                    Email Address
-
-                </label>
-
-                <div class="input-group">
-
-                    <div class="input-icon">
-
-                        <i class="bi bi-envelope-fill"></i>
-
-                    </div>
-
-                    <input
-                        type="email"
-                        name="email"
-                        class="form-control"
-                        placeholder="Enter your email address"
-                        required
-                    >
-
-                </div>
-
-            </div>
-
-            <!-- PASSWORD -->
-
-            <div class="mb-4">
-
-                <label class="form-label">
-
-                    Password
-
-                </label>
-
-                <div class="input-group">
-
-                    <div class="input-icon">
-
-                        <i class="bi bi-lock-fill"></i>
-
-                    </div>
-
-                    <input
-                        type="password"
-                        name="password"
-                        class="form-control"
-                        placeholder="Enter your password"
-                        required
-                    >
-
-                </div>
-
-            </div>
-
-            <!-- BUTTON -->
-
-            <button
-                type="submit"
-                class="btn btn-login w-100"
-            >
-
-                <i class="bi bi-box-arrow-in-right me-2"></i>
-
-                Secure Login
-
-            </button>
-
-        </form>
-
-        <!-- LINKS -->
-
-        <div class="login-links">
-
-            <a href="/jobaggregator/mailing/password_recovery.php">
-
-                <i class="bi bi-key-fill me-1"></i>
-
-                Forgot Password?
-
-            </a>
-
-            <a href="#">
-
-                <i class="bi bi-shield-check me-1"></i>
-
-                Secure Access
-
-            </a>
-
-        </div>
-
-        <!-- FOOTER -->
-
-        <div class="footer-text">
-
-            © <?= date('Y') ?>
-
-            <?= htmlspecialchars($siteName) ?>
-
-            • All Rights Reserved
-
-        </div>
-
-    </div>
-
-</div>
-
+    <script>
+        // Password visibility toggle
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+
+        if (togglePassword) {
+            togglePassword.addEventListener('click', function() {
+                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                password.setAttribute('type', type);
+                this.classList.toggle('bi-eye');
+                this.classList.toggle('bi-eye-slash');
+            });
+        }
+
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert-modern');
+            alerts.forEach(alert => {
+                alert.style.transition = 'opacity 0.5s';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 5000);
+    </script>
 </body>
 </html>

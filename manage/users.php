@@ -1,7 +1,39 @@
 <?php
+// =============================================================
+// LOGIN CHECK 
+// =============================================================
 
-session_start();
+// Start session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
+// Define the redirect function
+function redirectToSignin() {
+    header('Location: ../security/signin.php');
+    exit();
+}
+
+// Check if user is logged in
+$isLoggedIn = false;
+
+if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+    $isLoggedIn = true;
+} 
+
+if (!$isLoggedIn) {
+    redirectToSignin();
+}
+
+$_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+
+// =============================================================
+// INCLUDE EXTERNAL HEADER & NAVIGATION FROM bars/
+// =============================================================
+require_once __DIR__ . '/../bars/head_nav.php';
+?>
+
+<?php
 require_once __DIR__ . '/../core/database.php';
 
 $db = Database::connect();
@@ -12,21 +44,11 @@ $db = Database::connect();
 |--------------------------------------------------------------------------
 */
 
-if (
-    !isset($_SESSION['user_role'])
-    ||
-    $_SESSION['user_role'] !== 'Admin'
-) {
-
+if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'Admin') {
     die("
-        <div style='padding:40px;font-family:Arial;'>
-
+        <div style='padding:40px;font-family:Arial; text-align:center;'>
             <h2>Access Denied</h2>
-
-            <p>
-                Only administrators can manage users. <a href='../'>Dashboard</a>
-            </p>
-
+            <p>Only administrators can manage users. <a href='../index.php'>Return to Dashboard</a></p>
         </div>
     ");
 }
@@ -38,23 +60,17 @@ if (
 */
 
 if (isset($_GET['delete'])) {
-
     $userId = (int) $_GET['delete'];
-
+    
     // prevent self delete
     if ($userId == $_SESSION['user_id']) {
-
         header("Location: users.php?self_delete=1");
         exit;
     }
-
-    $stmt = $db->prepare("
-        DELETE FROM users
-        WHERE id = ?
-    ");
-
+    
+    $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
     $stmt->execute([$userId]);
-
+    
     header("Location: users.php?deleted=1");
     exit;
 }
@@ -66,16 +82,9 @@ if (isset($_GET['delete'])) {
 */
 
 if (isset($_POST['delete_all_users'])) {
-
-    $stmt = $db->prepare("
-        DELETE FROM users
-        WHERE id != ?
-    ");
-
-    $stmt->execute([
-        $_SESSION['user_id']
-    ]);
-
+    $stmt = $db->prepare("DELETE FROM users WHERE id != ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    
     header("Location: users.php?all_deleted=1");
     exit;
 }
@@ -87,21 +96,15 @@ if (isset($_POST['delete_all_users'])) {
 */
 
 if (isset($_GET['toggle'])) {
-
     $userId = (int) $_GET['toggle'];
-
+    
     $stmt = $db->prepare("
-        UPDATE users
-        SET is_active =
-            CASE
-                WHEN is_active = 1 THEN 0
-                ELSE 1
-            END
+        UPDATE users 
+        SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END 
         WHERE id = ?
     ");
-
     $stmt->execute([$userId]);
-
+    
     header("Location: users.php?status=1");
     exit;
 }
@@ -113,30 +116,14 @@ if (isset($_GET['toggle'])) {
 */
 
 if (isset($_POST['change_role'])) {
-
     $userId = (int) $_POST['user_id'];
-
     $newRole = trim($_POST['role']);
-
-    $allowedRoles = [
-        'Admin',
-        'Editor',
-        'Moderator'
-    ];
-
+    $allowedRoles = ['Admin', 'Editor', 'Moderator'];
+    
     if (in_array($newRole, $allowedRoles)) {
-
-        $stmt = $db->prepare("
-            UPDATE users
-            SET role = ?
-            WHERE id = ?
-        ");
-
-        $stmt->execute([
-            $newRole,
-            $userId
-        ]);
-
+        $stmt = $db->prepare("UPDATE users SET role = ? WHERE id = ?");
+        $stmt->execute([$newRole, $userId]);
+        
         header("Location: users.php?role_updated=1");
         exit;
     }
@@ -149,29 +136,14 @@ if (isset($_POST['change_role'])) {
 */
 
 if (isset($_POST['change_password'])) {
-
     $userId = (int) $_POST['user_id'];
-
     $newPassword = trim($_POST['new_password']);
-
+    
     if (!empty($newPassword)) {
-
-        $hashedPassword = password_hash(
-            $newPassword,
-            PASSWORD_DEFAULT
-        );
-
-        $stmt = $db->prepare("
-            UPDATE users
-            SET password = ?
-            WHERE id = ?
-        ");
-
-        $stmt->execute([
-            $hashedPassword,
-            $userId
-        ]);
-
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $stmt = $db->prepare("UPDATE users SET password = ? WHERE id = ?");
+        $stmt->execute([$hashedPassword, $userId]);
+        
         header("Location: users.php?password_updated=1");
         exit;
     }
@@ -185,90 +157,29 @@ if (isset($_POST['change_password'])) {
 
 $message = '';
 
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST'
-    &&
-    isset($_POST['add_user'])
-) {
-
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $fullName = trim($_POST['full_name']);
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
     $role = trim($_POST['role']);
-
-    if (
-        empty($fullName)
-        ||
-        empty($email)
-        ||
-        empty($password)
-    ) {
-
-        $message = "
-            <div class='alert alert-danger border-0 shadow-sm rounded-4'>
-                All fields are required.
-            </div>
-        ";
-
+    
+    if (empty($fullName) || empty($email) || empty($password)) {
+        $message = "<div class='alert alert-danger border-0 shadow-sm rounded-4'>All fields are required.</div>";
     } else {
-
-        $stmt = $db->prepare("
-            SELECT id
-            FROM users
-            WHERE email = ?
-            LIMIT 1
-        ");
-
+        $stmt = $db->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
         $stmt->execute([$email]);
-
+        
         if ($stmt->fetch()) {
-
-            $message = "
-                <div class='alert alert-warning border-0 shadow-sm rounded-4'>
-                    User already exists.
-                </div>
-            ";
-
+            $message = "<div class='alert alert-warning border-0 shadow-sm rounded-4'>User already exists.</div>";
         } else {
-
-            $hashedPassword = password_hash(
-                $password,
-                PASSWORD_DEFAULT
-            );
-
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $db->prepare("
-                INSERT INTO users (
-
-                    full_name,
-                    email,
-                    password,
-                    role,
-                    is_active,
-                    created_at
-
-                )
-
-                VALUES (
-
-                    ?, ?, ?, ?, 1, NOW()
-
-                )
+                INSERT INTO users (full_name, email, password, role, is_active, created_at) 
+                VALUES (?, ?, ?, ?, 1, NOW())
             ");
-
-            $stmt->execute([
-
-                $fullName,
-                $email,
-                $hashedPassword,
-                $role
-
-            ]);
-
-            $message = "
-                <div class='alert alert-success border-0 shadow-sm rounded-4'>
-                    User created successfully.
-                </div>
-            ";
+            $stmt->execute([$fullName, $email, $hashedPassword, $role]);
+            
+            $message = "<div class='alert alert-success border-0 shadow-sm rounded-4'>User created successfully.</div>";
         }
     }
 }
@@ -279,34 +190,11 @@ if (
 |--------------------------------------------------------------------------
 */
 
-$totalUsers = $db->query("
-    SELECT COUNT(*) total
-    FROM users
-")->fetch()['total'];
-
-$totalAdmins = $db->query("
-    SELECT COUNT(*) total
-    FROM users
-    WHERE role = 'Admin'
-")->fetch()['total'];
-
-$totalEditors = $db->query("
-    SELECT COUNT(*) total
-    FROM users
-    WHERE role = 'Editor'
-")->fetch()['total'];
-
-$totalModerators = $db->query("
-    SELECT COUNT(*) total
-    FROM users
-    WHERE role = 'Moderator'
-")->fetch()['total'];
-
-$totalActive = $db->query("
-    SELECT COUNT(*) total
-    FROM users
-    WHERE is_active = 1
-")->fetch()['total'];
+$totalUsers = $db->query("SELECT COUNT(*) total FROM users")->fetch()['total'];
+$totalAdmins = $db->query("SELECT COUNT(*) total FROM users WHERE role = 'Admin'")->fetch()['total'];
+$totalEditors = $db->query("SELECT COUNT(*) total FROM users WHERE role = 'Editor'")->fetch()['total'];
+$totalModerators = $db->query("SELECT COUNT(*) total FROM users WHERE role = 'Moderator'")->fetch()['total'];
+$totalActive = $db->query("SELECT COUNT(*) total FROM users WHERE is_active = 1")->fetch()['total'];
 
 /*
 |--------------------------------------------------------------------------
@@ -321,34 +209,19 @@ $where = [];
 $params = [];
 
 if (!empty($search)) {
-
-    $where[] = "
-        (
-            full_name LIKE ?
-            OR email LIKE ?
-            OR role LIKE ?
-        )
-    ";
-
+    $where[] = "(full_name LIKE ? OR email LIKE ? OR role LIKE ?)";
     $searchTerm = "%{$search}%";
-
     $params[] = $searchTerm;
     $params[] = $searchTerm;
     $params[] = $searchTerm;
 }
 
 if (!empty($roleFilter)) {
-
     $where[] = "role = ?";
     $params[] = $roleFilter;
 }
 
-$whereSql = '';
-
-if (!empty($where)) {
-
-    $whereSql = 'WHERE ' . implode(' AND ', $where);
-}
+$whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
 /*
 |--------------------------------------------------------------------------
@@ -357,16 +230,8 @@ if (!empty($where)) {
 */
 
 $perPage = 10;
-
-$page = isset($_GET['page'])
-    ? (int) $_GET['page']
-    : 1;
-
-if ($page < 1) {
-
-    $page = 1;
-}
-
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+if ($page < 1) $page = 1;
 $offset = ($page - 1) * $perPage;
 
 /*
@@ -375,24 +240,13 @@ $offset = ($page - 1) * $perPage;
 |--------------------------------------------------------------------------
 */
 
-$countSql = "
-    SELECT COUNT(*) total
-    FROM users
-    $whereSql
-";
-
+$countSql = "SELECT COUNT(*) total FROM users $whereSql";
 $countStmt = $db->prepare($countSql);
-
 $countStmt->execute($params);
-
 $totalFiltered = $countStmt->fetch()['total'];
 
 $totalPages = ceil($totalFiltered / $perPage);
-
-if ($totalPages < 1) {
-
-    $totalPages = 1;
-}
+if ($totalPages < 1) $totalPages = 1;
 
 /*
 |--------------------------------------------------------------------------
@@ -400,990 +254,725 @@ if ($totalPages < 1) {
 |--------------------------------------------------------------------------
 */
 
-$sql = "
-    SELECT *
-    FROM users
-
-    $whereSql
-
-    ORDER BY id DESC
-
-    LIMIT $perPage OFFSET $offset
-";
-
+$sql = "SELECT * FROM users $whereSql ORDER BY id DESC LIMIT $perPage OFFSET $offset";
 $stmt = $db->prepare($sql);
-
 $stmt->execute($params);
-
 $users = $stmt->fetchAll();
 
 $number = ($page - 1) * $perPage + 1;
-
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<style>
+    /* Page-specific styles matching feed page */
+    .main-wrapper {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 20px;
+    }
 
-<head>
+    /* Page Heading */
+    .page_heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding: 20px 25px;
+        background: var(--gradient-1);
+        border-radius: 14px;
+        box-shadow: var(--shadow-md);
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--white);
+    }
 
-    <meta charset="UTF-8">
+    .totalusersheading {
+        background: rgba(255, 255, 255, 0.2);
+        color: var(--white);
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+    }
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    .totalusersheading span {
+        color: var(--white) !important;
+        font-weight: 700;
+    }
 
-    <title>Manage Users</title>
+    /* Stats Cards */
+    .stats-card {
+        border: none;
+        border-radius: 18px;
+        transition: 0.3s;
+        background: var(--white);
+        cursor: pointer;
+    }
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-md);
+    }
 
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    .icon-box {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 24px;
+    }
 
-    <style>
+    .blue { background: #2563eb; }
+    .green { background: #059669; }
+    .orange { background: #d97706; }
+    .purple { background: #7c3aed; }
 
-        body{
-            background:#f4f7fb;
-            overflow-x:hidden;
-            font-family:Segoe UI, sans-serif;
+    /* Search Section */
+    .search-section {
+        background: var(--white);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #E8E8F0;
+    }
+
+    .search-input {
+        border: 2px solid #E8E8F0;
+        border-radius: 10px;
+        padding: 10px 15px;
+        transition: 0.3s;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+        outline: none;
+    }
+
+    /* Add User Card */
+    .add-user-card {
+        background: var(--white);
+        border-radius: 14px;
+        margin-bottom: 25px;
+        overflow: hidden;
+        transition: 0.3s;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #E8E8F0;
+    }
+
+    .add-user-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    .card-header-custom {
+        background: var(--gradient-1);
+        color: var(--white);
+        padding: 15px 20px;
+        border-bottom: none;
+    }
+
+    .card-header-custom h4 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    /* Users Grid */
+    .users-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .user-card {
+        background: var(--white);
+        border-radius: 14px;
+        overflow: hidden;
+        transition: 0.3s;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #E8E8F0;
+    }
+
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary);
+    }
+
+    .user-toprow {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        align-items: flex-start;
+    }
+
+    .user-avatar {
+        min-width: 70px;
+    }
+
+    .user-avatar i {
+        width: 70px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gradient-1);
+        border-radius: 50%;
+        font-size: 32px;
+        color: white;
+    }
+
+    .user-data {
+        flex: 1;
+    }
+
+    .user-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--dark);
+        text-decoration: none;
+        line-height: 1.4;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: inline-block;
+    }
+
+    .you-badge {
+        background: #dbeafe;
+        color: #1d4ed8;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 10px;
+        display: inline-block;
+    }
+
+    .user-meta {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+    }
+
+    .user-field {
+        background: var(--bg-light);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 12px;
+        border: 1px solid #E8E8F0;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .user-field:hover {
+        border-color: var(--primary);
+        background: #F0EDFF;
+    }
+
+    .user-field i {
+        color: var(--primary);
+        font-size: 14px;
+    }
+
+    .field-label {
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .badge-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .badge-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-admin {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-editor {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-moderator {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+
+    .user-bottomrow {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 12px 20px;
+        border-top: 1px solid #E8E8F0;
+        background: var(--bg-light);
+    }
+
+    .user-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .user-button {
+        border: none;
+        background: #F0EDFF;
+        color: var(--primary);
+        padding: 8px 18px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 13px;
+        text-decoration: none;
+        transition: 0.3s;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .user-button:hover {
+        background: var(--primary);
+        color: var(--white);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .user-button-danger {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .user-button-danger:hover {
+        background: #dc2626;
+        color: var(--white);
+    }
+
+    .user-button-warning {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .user-button-warning:hover {
+        background: #d97706;
+        color: var(--white);
+    }
+
+    /* Role Select */
+    .role-select {
+        border: 2px solid #E8E8F0;
+        border-radius: 10px;
+        padding: 6px 12px;
+        font-size: 13px;
+        background: var(--white);
+        transition: 0.3s;
+    }
+
+    .role-select:focus {
+        border-color: var(--primary);
+        outline: none;
+    }
+
+    /* Pagination */
+    .pagination-list {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 30px;
+        padding: 0;
+    }
+
+    .pagination-list li {
+        list-style: none;
+    }
+
+    .pagination-list li a {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--white);
+        color: var(--dark);
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+        transition: 0.3s;
+        border: 2px solid #E8E8F0;
+    }
+
+    .pagination-list li.active a {
+        background: var(--gradient-1);
+        color: var(--white);
+        border-color: transparent;
+        box-shadow: var(--shadow-md);
+    }
+
+    .pagination-list li a:hover {
+        background: var(--primary);
+        color: var(--white);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    @media(max-width: 768px) {
+        .main-wrapper {
+            padding: 15px;
         }
 
-        .main-wrapper{
-            margin-left:270px;
-            padding:30px;
+        .page_heading {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+            font-size: 18px;
+            padding: 15px;
         }
 
-        .top-header{
-            background:#ffffff;
-            padding:25px;
-            border-radius:24px;
-            margin-bottom:25px;
-            box-shadow:0 4px 20px rgba(15,23,42,0.06);
+        .user-toprow {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
         }
 
-        .stats-card{
-            border:none;
-            border-radius:24px;
-            transition:0.3s;
-            background:#fff;
+        .user-meta {
+            grid-template-columns: 1fr;
         }
 
-        .stats-card:hover{
-            transform:translateY(-4px);
+        .user-bottomrow {
+            justify-content: center;
         }
 
-        .icon-box{
-            width:60px;
-            height:60px;
-            border-radius:18px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            color:#fff;
-            font-size:24px;
+        .user-actions {
+            flex-direction: column;
+            width: 100%;
         }
 
-        .blue{background:#2563eb;}
-        .green{background:#059669;}
-        .orange{background:#d97706;}
-        .purple{background:#7c3aed;}
-
-        .card-box{
-            border:none;
-            border-radius:24px;
-            overflow:hidden;
-            background:#fff;
+        .user-button {
+            width: 100%;
+            justify-content: center;
         }
+    }
 
-        .form-control,
-        .form-select{
-            min-height:52px;
-            border-radius:14px;
-            border:1px solid #dbe3ee;
-        }
+    /* Modal Styles */
+    .modal-content-custom {
+        border-radius: 14px;
+        border: none;
+    }
 
-        .form-control:focus,
-        .form-select:focus{
-            box-shadow:none;
-            border-color:#2563eb;
-        }
-
-        .table thead{
-            background:#2563eb;
-            color:#fff;
-        }
-
-        .table thead th{
-            padding:16px;
-            border:none;
-        }
-
-        .table tbody td{
-            padding:16px;
-            vertical-align:middle;
-        }
-
-        .badge-active{
-            background:#dcfce7;
-            color:#166534;
-            padding:8px 14px;
-            border-radius:12px;
-            font-size:12px;
-            font-weight:600;
-        }
-
-        .badge-inactive{
-            background:#fee2e2;
-            color:#991b1b;
-            padding:8px 14px;
-            border-radius:12px;
-            font-size:12px;
-            font-weight:600;
-        }
-
-        .you-badge{
-            background:#dbeafe;
-            color:#1d4ed8;
-            padding:5px 10px;
-            border-radius:10px;
-            font-size:11px;
-            font-weight:700;
-            margin-left:8px;
-        }
-
-        .action-btn{
-            width:40px;
-            height:40px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            border-radius:12px;
-        }
-
-        .btn-primary{
-            background:#2563eb;
-            border:none;
-            border-radius:14px;
-        }
-
-        .btn-primary:hover{
-            background:#1d4ed8;
-        }
-
-        .btn-danger{
-            border-radius:14px;
-        }
-
-        .page-link{
-            border:none;
-            border-radius:10px;
-            margin:0 3px;
-            color:#2563eb;
-        }
-
-        .page-item.active .page-link{
-            background:#2563eb;
-        }
-
-        @media(max-width:992px){
-
-            .main-wrapper{
-                margin-left:85px;
-                padding:15px;
-            }
-        }
-
-    </style>
-
-</head>
-
-<body>
-
-<?php include '../sidebar/sidebar.php'; ?>
+    .modal-header-custom {
+        background: var(--gradient-1);
+        color: var(--white);
+        border-bottom: none;
+        border-radius: 14px 14px 0 0;
+    }
+</style>
 
 <div class="main-wrapper">
-
-    <!-- HEADER -->
-
-    <div class="top-header d-flex justify-content-between align-items-center flex-wrap gap-3">
-
-        <div>
-
-            <h2 class="fw-bold mb-1">
-                Manage System Users
-            </h2>
-
-            <small class="text-muted">
-                Advanced administrator management panel
-            </small>
-
+    <!-- Page Heading -->
+    <div class="page_heading">
+        Manage System Users
+        <div class="totalusersheading">
+            Total Users: <span><?= number_format($totalUsers) ?></span>
         </div>
-
-        <div class="d-flex gap-2">
-
-            <a href="../index.php"
-               class="btn btn-primary px-4">
-
-                <i class="bi bi-speedometer2 me-2"></i>
-
-                Dashboard
-
-            </a>
-
-            <form method="POST"
-                  onsubmit="return confirm('Delete all users except yourself?');">
-
-                <button
-                    type="submit"
-                    name="delete_all_users"
-                    class="btn btn-danger px-4"
-                >
-
-                    <i class="bi bi-trash3-fill me-2"></i>
-
-                    Delete All Users
-
-                </button>
-
-            </form>
-
-        </div>
-
     </div>
 
-    <!-- ALERTS -->
-
+    <!-- Alert Messages -->
     <?= $message ?>
 
     <?php if(isset($_GET['deleted'])): ?>
+        <div class="alert alert-danger border-0 shadow-sm mb-4">User deleted successfully.</div>
+    <?php endif; ?>
 
-        <div class="alert alert-danger rounded-4 border-0 shadow-sm">
-            User deleted successfully.
-        </div>
-
+    <?php if(isset($_GET['self_delete'])): ?>
+        <div class="alert alert-warning border-0 shadow-sm mb-4">You cannot delete your own account.</div>
     <?php endif; ?>
 
     <?php if(isset($_GET['all_deleted'])): ?>
-
-        <div class="alert alert-danger rounded-4 border-0 shadow-sm">
-            All users deleted successfully except your account.
-        </div>
-
+        <div class="alert alert-danger border-0 shadow-sm mb-4">All users deleted successfully except your account.</div>
     <?php endif; ?>
 
     <?php if(isset($_GET['status'])): ?>
-
-        <div class="alert alert-success rounded-4 border-0 shadow-sm">
-            User status updated successfully.
-        </div>
-
+        <div class="alert alert-success border-0 shadow-sm mb-4">User status updated successfully.</div>
     <?php endif; ?>
 
     <?php if(isset($_GET['role_updated'])): ?>
-
-        <div class="alert alert-primary rounded-4 border-0 shadow-sm">
-            User role updated successfully.
-        </div>
-
+        <div class="alert alert-primary border-0 shadow-sm mb-4">User role updated successfully.</div>
     <?php endif; ?>
 
     <?php if(isset($_GET['password_updated'])): ?>
-
-        <div class="alert alert-warning rounded-4 border-0 shadow-sm">
-            Password changed successfully.
-        </div>
-
+        <div class="alert alert-warning border-0 shadow-sm mb-4">Password changed successfully.</div>
     <?php endif; ?>
 
-    <!-- STATS -->
-
+    <!-- Statistics Cards -->
     <div class="row mb-4">
-
         <div class="col-lg-3 col-md-6 mb-3">
-
             <div class="card stats-card shadow-sm">
-
                 <div class="card-body d-flex justify-content-between align-items-center">
-
                     <div>
-
-                        <h6 class="text-muted">
-                            Total Users
-                        </h6>
-
-                        <h2 class="fw-bold">
-                            <?= number_format($totalUsers) ?>
-                        </h2>
-
+                        <h6 class="text-muted">Total Users</h6>
+                        <h2 class="mb-0"><?= number_format($totalUsers) ?></h2>
                     </div>
-
-                    <div class="icon-box blue">
-
-                        <i class="bi bi-people"></i>
-
-                    </div>
-
+                    <div class="icon-box blue"><i class="bi bi-people"></i></div>
                 </div>
-
             </div>
-
         </div>
-
         <div class="col-lg-3 col-md-6 mb-3">
-
             <div class="card stats-card shadow-sm">
-
                 <div class="card-body d-flex justify-content-between align-items-center">
-
                     <div>
-
-                        <h6 class="text-muted">
-                            Active Users
-                        </h6>
-
-                        <h2 class="fw-bold">
-                            <?= number_format($totalActive) ?>
-                        </h2>
-
+                        <h6 class="text-muted">Active Users</h6>
+                        <h2 class="mb-0"><?= number_format($totalActive) ?></h2>
                     </div>
-
-                    <div class="icon-box green">
-
-                        <i class="bi bi-check-circle"></i>
-
-                    </div>
-
+                    <div class="icon-box green"><i class="bi bi-check-circle"></i></div>
                 </div>
-
             </div>
-
         </div>
-
         <div class="col-lg-3 col-md-6 mb-3">
-
             <div class="card stats-card shadow-sm">
-
                 <div class="card-body d-flex justify-content-between align-items-center">
-
                     <div>
-
-                        <h6 class="text-muted">
-                            Admins
-                        </h6>
-
-                        <h2 class="fw-bold">
-                            <?= number_format($totalAdmins) ?>
-                        </h2>
-
+                        <h6 class="text-muted">Admins</h6>
+                        <h2 class="mb-0"><?= number_format($totalAdmins) ?></h2>
                     </div>
-
-                    <div class="icon-box orange">
-
-                        <i class="bi bi-shield-lock"></i>
-
-                    </div>
-
+                    <div class="icon-box orange"><i class="bi bi-shield-lock"></i></div>
                 </div>
-
             </div>
-
         </div>
-
         <div class="col-lg-3 col-md-6 mb-3">
-
             <div class="card stats-card shadow-sm">
-
                 <div class="card-body d-flex justify-content-between align-items-center">
-
                     <div>
-
-                        <h6 class="text-muted">
-                            Editors + Mods
-                        </h6>
-
-                        <h2 class="fw-bold">
-                            <?= number_format($totalEditors + $totalModerators) ?>
-                        </h2>
-
+                        <h6 class="text-muted">Staff Members</h6>
+                        <h2 class="mb-0"><?= number_format($totalEditors + $totalModerators) ?></h2>
                     </div>
-
-                    <div class="icon-box purple">
-
-                        <i class="bi bi-person-workspace"></i>
-
-                    </div>
-
+                    <div class="icon-box purple"><i class="bi bi-person-workspace"></i></div>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
-    <!-- ADD USER -->
-
-    <div class="card card-box shadow-sm mb-4">
-
-        <div class="card-header bg-white border-0 py-4">
-
-            <h4 class="fw-bold mb-0">
-                Add New User
-            </h4>
-
+    <!-- Add User Card -->
+    <div class="add-user-card">
+        <div class="card-header-custom">
+            <h4><i class="bi bi-person-plus-fill me-2"></i> Add New User</h4>
         </div>
-
-        <div class="card-body p-4">
-
+        <div class="card-body" style="padding: 20px;">
             <form method="POST">
-
-                <input type="hidden"
-                       name="add_user"
-                       value="1">
-
-                <div class="row">
-
-                    <div class="col-md-4 mb-3">
-
-                        <label class="form-label fw-semibold">
-                            Full Name
-                        </label>
-
-                        <input
-                            type="text"
-                            name="full_name"
-                            class="form-control"
-                            required
-                        >
-
+                <input type="hidden" name="add_user" value="1">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Full Name</label>
+                        <input type="text" name="full_name" class="form-control search-input" required>
                     </div>
-
-                    <div class="col-md-4 mb-3">
-
-                        <label class="form-label fw-semibold">
-                            Email
-                        </label>
-
-                        <input
-                            type="email"
-                            name="email"
-                            class="form-control"
-                            required
-                        >
-
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="email" class="form-control search-input" required>
                     </div>
-
-                    <div class="col-md-2 mb-3">
-
-                        <label class="form-label fw-semibold">
-                            Password
-                        </label>
-
-                        <input
-                            type="password"
-                            name="password"
-                            class="form-control"
-                            required
-                        >
-
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Password</label>
+                        <input type="password" name="password" class="form-control search-input" required>
                     </div>
-
-                    <div class="col-md-2 mb-3">
-
-                        <label class="form-label fw-semibold">
-                            Role
-                        </label>
-
-                        <select
-                            name="role"
-                            class="form-select"
-                        >
-
-                            <option value="Admin">Admin</option>
-                            <option value="Editor">Editor</option>
-                            <option value="Moderator">Moderator</option>
-
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Role</label>
+                        <select name="role" class="form-select search-input">
+                            <option value="Admin">👑 Admin</option>
+                            <option value="Editor">✏️ Editor</option>
+                            <option value="Moderator">🛡️ Moderator</option>
                         </select>
-
                     </div>
-
                 </div>
-
-                <button
-                    type="submit"
-                    class="btn btn-primary w-100"
-                    style="height:55px;"
-                >
-
-                    <i class="bi bi-person-plus-fill me-2"></i>
-
-                    Create User
-
+                <button type="submit" class="btn btn-primary w-100 mt-3" style="height: 50px;">
+                    <i class="bi bi-person-plus-fill me-2"></i> Create User
                 </button>
-
             </form>
-
         </div>
-
     </div>
 
-    <!-- USERS TABLE -->
-
-    <div class="card card-box shadow-sm">
-
-        <div class="card-header bg-white border-0 py-4">
-
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-
-                <h4 class="fw-bold mb-0">
-                    All System Users
-                </h4>
-
-                <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill">
-
-                    <?= number_format($totalFiltered) ?>
-
-                    Users
-
-                </span>
-
+    <!-- Search Section -->
+    <div class="search-section">
+        <form method="GET">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <input type="text" name="search" class="form-control search-input" 
+                           placeholder="Search by name, email or role..." 
+                           value="<?= htmlspecialchars($search) ?>">
+                </div>
+                <div class="col-md-3">
+                    <select name="role" class="form-select search-input">
+                        <option value="">All Roles</option>
+                        <option value="Admin" <?= $roleFilter == 'Admin' ? 'selected' : '' ?>>👑 Admin</option>
+                        <option value="Editor" <?= $roleFilter == 'Editor' ? 'selected' : '' ?>>✏️ Editor</option>
+                        <option value="Moderator" <?= $roleFilter == 'Moderator' ? 'selected' : '' ?>>🛡️ Moderator</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100 search-input">
+                        <i class="bi bi-search me-2"></i> Search
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="users.php" class="btn btn-light border w-100 search-input">
+                        <i class="bi bi-x-circle me-2"></i> Clear
+                    </a>
+                </div>
             </div>
+        </form>
+    </div>
 
-        </div>
+    <!-- Users List - Card Layout -->
+    <div class="users-grid">
+        <?php if(count($users) > 0): ?>
+            <?php foreach($users as $user): ?>
+                <div class="user-card">
+                    <div class="user-toprow">
+                        <div class="user-avatar">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="user-data">
+                            <div>
+                                <span class="user-name"><?= htmlspecialchars($user['full_name']) ?></span>
+                                <?php if($user['id'] == $_SESSION['user_id']): ?>
+                                    <span class="you-badge"><i class="bi bi-star-fill"></i> YOU</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="user-meta">
+                                <div class="user-field">
+                                    <i class="bi bi-envelope"></i>
+                                    <span class="field-label">Email:</span>
+                                    <span><?= htmlspecialchars($user['email']) ?></span>
+                                </div>
+                                <div class="user-field">
+                                    <i class="bi bi-calendar"></i>
+                                    <span class="field-label">Joined:</span>
+                                    <span><?= date('d M Y', strtotime($user['created_at'])) ?></span>
+                                </div>
+                                <div class="user-field">
+                                    <i class="bi bi-tag"></i>
+                                    <span class="field-label">Role:</span>
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="change_role" value="1">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <select name="role" class="role-select" onchange="this.form.submit()">
+                                            <option value="Admin" <?= $user['role'] == 'Admin' ? 'selected' : '' ?>>👑 Admin</option>
 
-        <div class="card-body">
+                                            <option value="Editor" <?= $user['role'] == 'Editor' ? 'selected' : '' ?>>✏️ Editor</option>
 
-            <!-- SEARCH -->
-
-            <form method="GET" class="mb-4">
-
-                <div class="row">
-
-                    <div class="col-lg-5 mb-3">
-
-                        <input
-                            type="text"
-                            name="search"
-                            list="usersList"
-                            autocomplete="off"
-                            class="form-control"
-                            placeholder="Search by name, email or role..."
-                            value="<?= htmlspecialchars($search) ?>"
-                        >
-
-                        <datalist id="usersList">
-
-                            <?php foreach($users as $u): ?>
-
-                                <option value="<?= htmlspecialchars($u['full_name']) ?>">
-                                <option value="<?= htmlspecialchars($u['email']) ?>">
-
-                            <?php endforeach; ?>
-
-                        </datalist>
-
+                                            <option value="Moderator" <?= $user['role'] == 'Moderator' ? 'selected' : '' ?>>🛡️ Moderator</option>
+                                        </select>
+                                    </form>
+                                </div>
+                                <div class="user-field">
+                                    <i class="bi bi-activity"></i>
+                                    <span class="field-label">Status:</span>
+                                    <span class="badge-status <?= $user['is_active'] ? 'badge-active' : 'badge-inactive' ?>">
+                                        <?= $user['is_active'] ? 'Active' : 'Disabled' ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="col-lg-3 mb-3">
-
-                        <select
-                            name="role"
-                            class="form-select"
-                        >
-
-                            <option value="">
-                                Filter by role
-                            </option>
-
-                            <option value="Admin"
-                                <?= $roleFilter == 'Admin' ? 'selected' : '' ?>>
-                                Admin
-                            </option>
-
-                            <option value="Editor"
-                                <?= $roleFilter == 'Editor' ? 'selected' : '' ?>>
-                                Editor
-                            </option>
-
-                            <option value="Moderator"
-                                <?= $roleFilter == 'Moderator' ? 'selected' : '' ?>>
-                                Moderator
-                            </option>
-
-                        </select>
-
+                    <div class="user-bottomrow">
+                        <div class="user-actions">
+                            <a href="?toggle=<?= $user['id'] ?>" class="user-button user-button-warning">
+                                <i class="bi bi-arrow-repeat"></i> Toggle Status
+                            </a>
+                            <button class="user-button" data-bs-toggle="modal" data-bs-target="#passwordModal<?= $user['id'] ?>">
+                                <i class="bi bi-key"></i> Change Password
+                            </button>
+                            <?php if($user['id'] != $_SESSION['user_id']): ?>
+                                <a href="?delete=<?= $user['id'] ?>" onclick="return confirm('Delete this user?')" class="user-button user-button-danger">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
-
-                    <div class="col-lg-2 mb-3">
-
-                        <button class="btn btn-primary w-100 h-100">
-
-                            <i class="bi bi-search me-2"></i>
-
-                            Search
-
-                        </button>
-
-                    </div>
-
-                    <div class="col-lg-2 mb-3">
-
-                        <a href="users.php"
-                           class="btn btn-light border w-100 h-100">
-
-                            <i class="bi bi-x-circle me-2"></i>
-
-                            Clear
-
-                        </a>
-
-                    </div>
-
                 </div>
 
-            </form>
-
-            <!-- TABLE -->
-
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        <?php if(count($users) > 0): ?>
-
-                            <?php foreach($users as $user): ?>
-
-                                <tr>
-
-                                    <td>
-                                        <strong><?= $number++ ?></strong>
-                                    </td>
-
-                                    <td>
-
-                                        <div class="fw-semibold">
-
-                                            <?= htmlspecialchars($user['full_name']) ?>
-
-                                            <?php if($user['id'] == $_SESSION['user_id']): ?>
-
-                                                <span class="you-badge">
-                                                    #YOU
-                                                </span>
-
-                                            <?php endif; ?>
-
-                                        </div>
-
-                                    </td>
-
-                                    <td>
-                                        <?= htmlspecialchars($user['email']) ?>
-                                    </td>
-
-                                    <td colspan="2">
-
-                                        <form method="POST">
-
-                                            <input
-                                                type="hidden"
-                                                name="change_role"
-                                                value="1"
-                                            >
-
-                                            <input
-                                                type="hidden"
-                                                name="user_id"
-                                                value="<?= $user['id'] ?>"
-                                            >
-
-                                            <select
-                                                name="role"
-                                                class="form-select form-select-sm"
-                                                onchange="this.form.submit()"
-                                            >
-
-                                                <option value="Admin"
-                                                    <?= $user['role'] == 'Admin' ? 'selected' : '' ?>>
-                                                    Admin
-                                                </option>
-
-                                                <option value="Editor"
-                                                    <?= $user['role'] == 'Editor' ? 'selected' : '' ?>>
-                                                    Editor
-                                                </option>
-
-                                                <option value="Moderator"
-                                                    <?= $user['role'] == 'Moderator' ? 'selected' : '' ?>>
-                                                    Moderator
-                                                </option>
-
-                                            </select>
-
-                                        </form>
-
-                                    </td>
-
-                                    <td>
-
-                                        <?php if($user['is_active']): ?>
-
-                                            <span class="badge-active">
-                                                Active
-                                            </span>
-
-                                        <?php else: ?>
-
-                                            <span class="badge-inactive">
-                                                Disabled
-                                            </span>
-
-                                        <?php endif; ?>
-
-                                    </td>
-
-                                    <td>
-
-                                        <?= date(
-                                            'd M Y',
-                                            strtotime($user['created_at'])
-                                        ) ?>
-
-                                    </td>
-
-                                    <td>
-
-                                        <div class="d-flex gap-2 flex-wrap">
-
-                                            <!-- TOGGLE -->
-
-                                            <a
-                                                href="?toggle=<?= $user['id'] ?>"
-                                                class="btn btn-warning btn-sm action-btn"
-                                                title="Enable / Disable"
-                                            >
-
-                                                <i class="bi bi-arrow-repeat"></i>
-
-                                            </a>
-
-                                            <!-- PASSWORD -->
-
-                                            <button
-                                                class="btn btn-dark btn-sm action-btn"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#passwordModal<?= $user['id'] ?>"
-                                            >
-
-                                                <i class="bi bi-key"></i>
-
-                                            </button>
-
-                                            <!-- DELETE -->
-
-                                            <?php if($user['id'] != $_SESSION['user_id']): ?>
-
-                                                <a
-                                                    href="?delete=<?= $user['id'] ?>"
-                                                    onclick="return confirm('Delete this user?')"
-                                                    class="btn btn-danger btn-sm action-btn"
-                                                >
-
-                                                    <i class="bi bi-trash"></i>
-
-                                                </a>
-
-                                            <?php endif; ?>
-
-                                        </div>
-
-                                        <!-- PASSWORD MODAL -->
-
-                                        <div class="modal fade"
-                                             id="passwordModal<?= $user['id'] ?>"
-                                             tabindex="-1">
-
-                                            <div class="modal-dialog">
-
-                                                <div class="modal-content rounded-4 border-0">
-
-                                                    <form method="POST">
-
-                                                        <div class="modal-header border-0">
-
-                                                            <h5 class="modal-title fw-bold">
-                                                                Change Password
-                                                            </h5>
-
-                                                            <button
-                                                                type="button"
-                                                                class="btn-close"
-                                                                data-bs-dismiss="modal"
-                                                            ></button>
-
-                                                        </div>
-
-                                                        <div class="modal-body">
-
-                                                            <input
-                                                                type="hidden"
-                                                                name="change_password"
-                                                                value="1"
-                                                            >
-
-                                                            <input
-                                                                type="hidden"
-                                                                name="user_id"
-                                                                value="<?= $user['id'] ?>"
-                                                            >
-
-                                                            <label class="form-label fw-semibold">
-                                                                New Password
-                                                            </label>
-
-                                                            <input
-                                                                type="password"
-                                                                name="new_password"
-                                                                class="form-control"
-                                                                required
-                                                            >
-
-                                                        </div>
-
-                                                        <div class="modal-footer border-0">
-
-                                                            <button
-                                                                type="button"
-                                                                class="btn btn-light border"
-                                                                data-bs-dismiss="modal"
-                                                            >
-
-                                                                Cancel
-
-                                                            </button>
-
-                                                            <button
-                                                                type="submit"
-                                                                class="btn btn-primary"
-                                                            >
-
-                                                                Update Password
-
-                                                            </button>
-
-                                                        </div>
-
-                                                    </form>
-
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-
-                            <?php endforeach; ?>
-
-                        <?php else: ?>
-
-                            <tr>
-
-                                <td colspan="7" class="text-center py-5">
-
-                                    <div class="text-muted">
-
-                                        <i class="bi bi-people fs-1"></i>
-
-                                        <p class="mt-3 mb-0">
-                                            No users found
-                                        </p>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                        <?php endif; ?>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            <!-- PAGINATION -->
-
-            <?php if($totalPages > 1): ?>
-
-                <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-3">
-
-                    <div class="text-muted">
-
-                        Page <?= $page ?>
-
-                        of
-
-                        <?= $totalPages ?>
-
+                <!-- Password Modal -->
+                <div class="modal fade" id="passwordModal<?= $user['id'] ?>" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content modal-content-custom">
+                            <div class="modal-header modal-header-custom">
+                                <h5 class="modal-title fw-bold"><i class="bi bi-key me-2"></i> Change Password</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST">
+                                <div class="modal-body" style="padding: 25px;">
+                                    <input type="hidden" name="change_password" value="1">
+                                    <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                    <label class="form-label fw-semibold">New Password for <?= htmlspecialchars($user['full_name']) ?></label>
+                                    <input type="password" name="new_password" class="form-control search-input" required placeholder="Enter new password">
+                                </div>
+                                <div class="modal-footer border-0" style="padding: 20px;">
+                                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Update Password</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-
-                    <nav>
-
-                        <ul class="pagination mb-0">
-
-                            <?php for($i = 1; $i <= $totalPages; $i++): ?>
-
-                                <li class="page-item <?= ($page == $i) ? 'active' : '' ?>">
-
-                                    <a
-                                        class="page-link"
-                                        href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&role=<?= urlencode($roleFilter) ?>"
-                                    >
-
-                                        <?= $i ?>
-
-                                    </a>
-
-                                </li>
-
-                            <?php endfor; ?>
-
-                        </ul>
-
-                    </nav>
-
                 </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="alert alert-info text-center p-5" style="background: var(--white); border-radius: 14px; box-shadow: var(--shadow-sm);">
+                <i class="bi bi-people" style="font-size: 48px; color: var(--primary);"></i>
+                <p class="mt-3 mb-0">No users found matching your criteria.</p>
+                <a href="users.php" class="btn btn-primary mt-3">Clear Filters</a>
+            </div>
+        <?php endif; ?>
+    </div>
 
+    <!-- Pagination -->
+    <?php if($totalPages > 1): ?>
+        <ul class="pagination-list">
+            <?php if($page > 1): ?>
+                <li>
+                    <a href="?page=<?= $page-1 ?>&search=<?= urlencode($search) ?>&role=<?= urlencode($roleFilter) ?>">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
             <?php endif; ?>
-
-        </div>
-
-    </div>
-
+            
+            <?php for($i = max(1, $page-2); $i <= min($totalPages, $page+2); $i++): ?>
+                <li class="<?= $i == $page ? 'active' : '' ?>">
+                    <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&role=<?= urlencode($roleFilter) ?>">
+                        <?= $i ?>
+                    </a>
+                </li>
+            <?php endfor; ?>
+            
+            <?php if($page < $totalPages): ?>
+                <li>
+                    <a href="?page=<?= $page+1 ?>&search=<?= urlencode($search) ?>&role=<?= urlencode($roleFilter) ?>">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            <?php endif; ?>
+        </ul>
+    <?php endif; ?>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>

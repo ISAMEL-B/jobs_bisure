@@ -1,5 +1,39 @@
 <?php
+// =============================================================
+// LOGIN CHECK 
+// =============================================================
 
+// Start session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Define the redirect function
+function redirectToSignin() {
+    header('Location: ../security/signin.php');
+    exit();
+}
+
+// Check if user is logged in
+$isLoggedIn = false;
+
+if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+    $isLoggedIn = true;
+} 
+
+if (!$isLoggedIn) {
+    redirectToSignin();
+}
+
+$_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+
+// =============================================================
+// INCLUDE EXTERNAL HEADER & NAVIGATION FROM bars/
+// =============================================================
+require_once __DIR__ . '/../bars/head_nav.php';
+?>
+
+<?php
 require_once __DIR__ . '/../core/database.php';
 
 $db = Database::connect();
@@ -11,18 +45,10 @@ $db = Database::connect();
 */
 
 if (isset($_GET['delete'])) {
-
     $id = (int) $_GET['delete'];
-
-    $stmt = $db->prepare("
-        DELETE FROM jobs
-        WHERE id = ?
-    ");
-
+    $stmt = $db->prepare("DELETE FROM jobs WHERE id = ?");
     $stmt->execute([$id]);
-
     header("Location: jobs.php?deleted=1");
-
     exit;
 }
 
@@ -33,140 +59,47 @@ if (isset($_GET['delete'])) {
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    if (
-        isset($_POST['job_ids']) &&
-        !empty($_POST['job_ids']) &&
-        isset($_POST['bulk_action']) &&
-        !empty($_POST['bulk_action'])
-    ) {
-
+    if (isset($_POST['job_ids']) && !empty($_POST['job_ids']) && isset($_POST['bulk_action']) && !empty($_POST['bulk_action'])) {
         $jobIds = $_POST['job_ids'];
-
         $action = $_POST['bulk_action'];
-
         $placeholders = implode(',', array_fill(0, count($jobIds), '?'));
 
-        /*
-        |--------------------------------------------------------------------------
-        | MARK AS FEATURED
-        |--------------------------------------------------------------------------
-        */
-
         if ($action === 'feature') {
-
-            $stmt = $db->prepare("
-                UPDATE jobs
-                SET is_featured = 1
-                WHERE id IN ($placeholders)
-            ");
-
+            $stmt = $db->prepare("UPDATE jobs SET is_featured = 1 WHERE id IN ($placeholders)");
             $stmt->execute($jobIds);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | REMOVE FEATURED
-        |--------------------------------------------------------------------------
-        */
 
         if ($action === 'unfeature') {
-
-            $stmt = $db->prepare("
-                UPDATE jobs
-                SET is_featured = 0
-                WHERE id IN ($placeholders)
-            ");
-
+            $stmt = $db->prepare("UPDATE jobs SET is_featured = 0 WHERE id IN ($placeholders)");
             $stmt->execute($jobIds);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | MARK ACTIVE
-        |--------------------------------------------------------------------------
-        */
 
         if ($action === 'activate') {
-
-            $stmt = $db->prepare("
-                UPDATE jobs
-                SET is_active = 1
-                WHERE id IN ($placeholders)
-            ");
-
+            $stmt = $db->prepare("UPDATE jobs SET is_active = 1 WHERE id IN ($placeholders)");
             $stmt->execute($jobIds);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | MARK INACTIVE
-        |--------------------------------------------------------------------------
-        */
 
         if ($action === 'deactivate') {
-
-            $stmt = $db->prepare("
-                UPDATE jobs
-                SET is_active = 0
-                WHERE id IN ($placeholders)
-            ");
-
+            $stmt = $db->prepare("UPDATE jobs SET is_active = 0 WHERE id IN ($placeholders)");
             $stmt->execute($jobIds);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | MARK AS EMAILED
-        |--------------------------------------------------------------------------
-        */
 
         if ($action === 'mark_emailed') {
-
-            $stmt = $db->prepare("
-                UPDATE jobs
-                SET views = 1
-                WHERE id IN ($placeholders)
-            ");
-
+            $stmt = $db->prepare("UPDATE jobs SET views = 1 WHERE id IN ($placeholders)");
             $stmt->execute($jobIds);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | REMOVE EMAILED MARK
-        |--------------------------------------------------------------------------
-        */
 
         if ($action === 'mark_not_emailed') {
-
-            $stmt = $db->prepare("
-                UPDATE jobs
-                SET views = 0
-                WHERE id IN ($placeholders)
-            ");
-
+            $stmt = $db->prepare("UPDATE jobs SET views = 0 WHERE id IN ($placeholders)");
             $stmt->execute($jobIds);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | DELETE JOBS
-        |--------------------------------------------------------------------------
-        */
-
         if ($action === 'delete') {
-
-            $stmt = $db->prepare("
-                DELETE FROM jobs
-                WHERE id IN ($placeholders)
-            ");
-
+            $stmt = $db->prepare("DELETE FROM jobs WHERE id IN ($placeholders)");
             $stmt->execute($jobIds);
         }
 
         header("Location: jobs.php?success=1");
-
         exit;
     }
 }
@@ -178,9 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 */
 
 $search = trim($_GET['search'] ?? '');
-
 $category = trim($_GET['category'] ?? '');
-
 $status = trim($_GET['status'] ?? '');
 
 /*
@@ -190,16 +121,8 @@ $status = trim($_GET['status'] ?? '');
 */
 
 $perPage = 10;
-
-$page = isset($_GET['page'])
-    ? (int) $_GET['page']
-    : 1;
-
-if ($page < 1) {
-
-    $page = 1;
-}
-
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+if ($page < 1) $page = 1;
 $offset = ($page - 1) * $perPage;
 
 /*
@@ -209,93 +132,31 @@ $offset = ($page - 1) * $perPage;
 */
 
 $where = [];
-
 $params = [];
 
-/*
-|--------------------------------------------------------------------------
-| SEARCH
-|--------------------------------------------------------------------------
-*/
-
 if (!empty($search)) {
-
-    $where[] = "
-        (
-            jobs.title LIKE ?
-            OR jobs.company_name LIKE ?
-            OR jobs.location LIKE ?
-            OR job_categories.name LIKE ?
-        )
-    ";
-
+    $where[] = "(jobs.title LIKE ? OR jobs.company_name LIKE ? OR jobs.location LIKE ? OR job_categories.name LIKE ?)";
     $searchTerm = "%{$search}%";
-
     $params[] = $searchTerm;
     $params[] = $searchTerm;
     $params[] = $searchTerm;
     $params[] = $searchTerm;
 }
 
-/*
-|--------------------------------------------------------------------------
-| CATEGORY
-|--------------------------------------------------------------------------
-*/
-
 if (!empty($category)) {
-
     $where[] = "jobs.category_id = ?";
-
     $params[] = $category;
 }
 
-/*
-|--------------------------------------------------------------------------
-| STATUS
-|--------------------------------------------------------------------------
-*/
-
 if ($status !== '') {
-
-    if ($status === 'active') {
-
-        $where[] = "jobs.is_active = 1";
-    }
-
-    if ($status === 'inactive') {
-
-        $where[] = "jobs.is_active = 0";
-    }
-
-    if ($status === 'featured') {
-
-        $where[] = "jobs.is_featured = 1";
-    }
-
-    if ($status === 'emailed') {
-
-        $where[] = "jobs.views > 0";
-    }
-
-    if ($status === 'remote') {
-
-        $where[] = "jobs.job_type = 'Remote'";
-    }
+    if ($status === 'active') $where[] = "jobs.is_active = 1";
+    if ($status === 'inactive') $where[] = "jobs.is_active = 0";
+    if ($status === 'featured') $where[] = "jobs.is_featured = 1";
+    if ($status === 'emailed') $where[] = "jobs.views > 0";
+    if ($status === 'remote') $where[] = "jobs.job_type = 'Remote'";
 }
 
-/*
-|--------------------------------------------------------------------------
-| FINAL WHERE SQL
-|--------------------------------------------------------------------------
-*/
-
-$whereSql = '';
-
-if (!empty($where)) {
-
-    $whereSql = 'WHERE ' . implode(' AND ', $where);
-}
+$whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
 /*
 |--------------------------------------------------------------------------
@@ -303,40 +164,15 @@ if (!empty($where)) {
 |--------------------------------------------------------------------------
 */
 
-$countSql = "
-    SELECT COUNT(*) total
-
-    FROM jobs
-
-    LEFT JOIN job_categories
-    ON jobs.category_id = job_categories.id
-
-    $whereSql
-";
-
+$countSql = "SELECT COUNT(*) total FROM jobs LEFT JOIN job_categories ON jobs.category_id = job_categories.id $whereSql";
 $countStmt = $db->prepare($countSql);
-
 $countStmt->execute($params);
-
 $totalJobs = $countStmt->fetch()['total'];
 
-/*
-|--------------------------------------------------------------------------
-| TOTAL PAGES
-|--------------------------------------------------------------------------
-*/
-
 $totalPages = ceil($totalJobs / $perPage);
-
-if ($totalPages < 1) {
-
-    $totalPages = 1;
-}
-
+if ($totalPages < 1) $totalPages = 1;
 if ($page > $totalPages) {
-
     $page = $totalPages;
-
     $offset = ($page - 1) * $perPage;
 }
 
@@ -346,31 +182,16 @@ if ($page > $totalPages) {
 |--------------------------------------------------------------------------
 */
 
-$sql = "
-    SELECT
-        jobs.*,
-        job_categories.name AS category_name,
-        job_sources.name AS source_name
-
-    FROM jobs
-
-    LEFT JOIN job_categories
-    ON jobs.category_id = job_categories.id
-
-    LEFT JOIN job_sources
-    ON jobs.source_id = job_sources.id
-
-    $whereSql
-
-    ORDER BY jobs.id DESC
-
-    LIMIT $perPage OFFSET $offset
-";
+$sql = "SELECT jobs.*, job_categories.name AS category_name, job_sources.name AS source_name 
+        FROM jobs 
+        LEFT JOIN job_categories ON jobs.category_id = job_categories.id 
+        LEFT JOIN job_sources ON jobs.source_id = job_sources.id 
+        $whereSql 
+        ORDER BY jobs.id DESC 
+        LIMIT $perPage OFFSET $offset";
 
 $stmt = $db->prepare($sql);
-
 $stmt->execute($params);
-
 $jobs = $stmt->fetchAll();
 
 /*
@@ -379,44 +200,13 @@ $jobs = $stmt->fetchAll();
 |--------------------------------------------------------------------------
 */
 
-$totalCategories = $db->query("
-    SELECT COUNT(*) total
-    FROM job_categories
-")->fetch()['total'];
-
-$totalFeaturedJobs = $db->query("
-    SELECT COUNT(*) total
-    FROM jobs
-    WHERE is_featured = 1
-")->fetch()['total'];
-
-$totalActiveJobs = $db->query("
-    SELECT COUNT(*) total
-    FROM jobs
-    WHERE is_active = 1
-")->fetch()['total'];
-
-$totalRemoteJobs = $db->query("
-    SELECT COUNT(*) total
-    FROM jobs
-    WHERE job_type = 'Remote'
-")->fetch()['total'];
-
-$totalEmailedJobs = $db->query("
-    SELECT COUNT(*) total
-    FROM jobs
-    WHERE views > 0
-")->fetch()['total'];
-
-$totalViews = $db->query("
-    SELECT SUM(views) total
-    FROM jobs
-")->fetch()['total'] ?? 0;
-
-$totalClicks = $db->query("
-    SELECT SUM(clicks) total
-    FROM jobs
-")->fetch()['total'] ?? 0;
+$totalCategories = $db->query("SELECT COUNT(*) total FROM job_categories")->fetch()['total'];
+$totalFeaturedJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_featured = 1")->fetch()['total'];
+$totalActiveJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 1")->fetch()['total'];
+$totalRemoteJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE job_type = 'Remote'")->fetch()['total'];
+$totalEmailedJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE views > 0")->fetch()['total'];
+$totalViews = $db->query("SELECT SUM(views) total FROM jobs")->fetch()['total'] ?? 0;
+$totalClicks = $db->query("SELECT SUM(clicks) total FROM jobs")->fetch()['total'] ?? 0;
 
 /*
 |--------------------------------------------------------------------------
@@ -424,831 +214,672 @@ $totalClicks = $db->query("
 |--------------------------------------------------------------------------
 */
 
-$categories = $db->query("
-    SELECT *
-    FROM job_categories
-    ORDER BY name ASC
-")->fetchAll();
-
+$categories = $db->query("SELECT * FROM job_categories ORDER BY name ASC")->fetchAll();
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<style>
+    /* Page-specific styles for Manage Jobs - Matching Feed Page Style */
+    .main-wrapper {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 20px;
+    }
 
-<head>
+    /* Page Heading */
+    .page_heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding: 20px 25px;
+        background: var(--gradient-1);
+        border-radius: 14px;
+        box-shadow: var(--shadow-md);
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--white);
+    }
 
-    <meta charset="UTF-8">
+    .totaljobsheading {
+        background: rgba(255, 255, 255, 0.2);
+        color: var(--white);
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+    }
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    .totaljobsheading span {
+        color: var(--white) !important;
+        font-weight: 700;
+    }
 
-    <title>Manage Jobs</title>
+    /* Search Section */
+    .search-section {
+        background: var(--white);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #E8E8F0;
+    }
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    .search-input {
+        border: 2px solid #E8E8F0;
+        border-radius: 10px;
+        padding: 10px 15px;
+        transition: 0.3s;
+    }
 
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    .search-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+        outline: none;
+    }
 
-    <style>
+    /* Bulk Actions Bar */
+    .bulk-actions-bar {
+        background: var(--bg-light);
+        border-radius: 14px;
+        padding: 15px 20px;
+        margin-bottom: 25px;
+        border: 1px solid #E8E8F0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
 
-        body{
-            background:#f1f5f9;
-            overflow-x:hidden;
+    /* Job Cards - Exactly matching feed page style */
+    #js-jobs-wrapper {
+        background: var(--white);
+        border-radius: 14px;
+        margin-bottom: 20px;
+        overflow: hidden;
+        transition: 0.3s;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #E8E8F0;
+        position: relative;
+    }
+
+    #js-jobs-wrapper:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary);
+    }
+
+    /* Checkbox for bulk actions */
+    .job-checkbox-wrapper {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 10;
+    }
+
+    .job-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: var(--primary);
+    }
+
+    .js-toprow {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        align-items: flex-start;
+    }
+
+    .js-image {
+        min-width: 80px;
+    }
+
+    .js-image img {
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        object-fit: contain;
+        background: var(--bg-light);
+        border: 2px solid #E8E8F0;
+        padding: 8px;
+        transition: 0.3s;
+    }
+
+    .js-image img:hover {
+        border-color: var(--primary);
+        transform: scale(1.05);
+    }
+
+    .js-data {
+        flex: 1;
+    }
+
+    .jobtitle {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--dark);
+        text-decoration: none;
+        line-height: 1.4;
+        transition: 0.3s;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .jobtitle:hover {
+        background: var(--gradient-2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .company-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #636E72;
+        font-size: 14px;
+        margin: 8px 0;
+    }
+
+    .company-name i {
+        color: var(--primary);
+    }
+
+    .js-status {
+        background: #E8F8F5;
+        color: var(--success);
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        display: inline-block;
+        margin-right: 8px;
+    }
+
+    .bg-new {
+        background: var(--danger);
+        color: var(--white);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .js-category-wrp {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+    }
+
+    .js-fields {
+        background: var(--bg-light);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 12px;
+        border: 1px solid #E8E8F0;
+        transition: 0.3s;
+    }
+
+    .js-fields:hover {
+        border-color: var(--primary);
+        background: #F0EDFF;
+    }
+
+    .js-bold {
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .js-bottomrow {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 12px 20px;
+        border-top: 1px solid #E8E8F0;
+        background: var(--bg-light);
+    }
+
+    .js-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .js-button {
+        border: none;
+        background: #F0EDFF;
+        color: var(--primary);
+        padding: 8px 18px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 13px;
+        text-decoration: none;
+        transition: 0.3s;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .js-button:hover {
+        background: var(--primary);
+        color: var(--white);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .js-btn-apply {
+        background: var(--gradient-1);
+        color: var(--white);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .js-btn-apply:hover {
+        background: var(--gradient-1);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+        color: var(--white);
+    }
+
+    .js-btn-delete {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .js-btn-delete:hover {
+        background: #dc2626;
+        color: var(--white);
+    }
+
+    /* Badges for status */
+    .badge-status {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+        margin-left: 8px;
+    }
+
+    .badge-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-featured {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-emailed {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    /* Pagination - Matching feed page */
+    .pagination-list {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 30px;
+        padding: 0;
+    }
+
+    .pagination-list li {
+        list-style: none;
+    }
+
+    .pagination-list li a {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--white);
+        color: var(--dark);
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+        transition: 0.3s;
+        border: 2px solid #E8E8F0;
+    }
+
+    .pagination-list li.active a {
+        background: var(--gradient-1);
+        color: var(--white);
+        border-color: transparent;
+        box-shadow: var(--shadow-md);
+    }
+
+    .pagination-list li a:hover {
+        background: var(--primary);
+        color: var(--white);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Select All Bar */
+    .select-all-bar {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 12px 20px;
+        background: var(--white);
+        border-radius: 12px;
+        border: 1px solid #E8E8F0;
+    }
+
+    /* Alert messages */
+    .alert-custom {
+        border-radius: 12px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+
+    @media(max-width: 768px) {
+        .main-wrapper {
+            padding: 15px;
         }
 
-        .main-wrapper{
-            margin-left:260px;
-            padding:30px;
+        .page_heading {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+            font-size: 18px;
+            padding: 15px;
         }
 
-        .top-header{
-            background:#fff;
-            border-radius:20px;
-            padding:25px;
-            margin-bottom:25px;
-            box-shadow:0 4px 20px rgba(0,0,0,0.05);
+        .js-toprow {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 15px;
         }
 
-        .stats-card{
-            border:none;
-            border-radius:18px;
-            transition:0.3s;
+        .js-bottomrow {
+            justify-content: center;
         }
 
-        .stats-card:hover{
-            transform:translateY(-5px);
+        .js-actions {
+            flex-direction: column;
+            width: 100%;
         }
 
-        .icon-box{
-            width:60px;
-            height:60px;
-            border-radius:15px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            color:#fff;
-            font-size:24px;
+        .js-button {
+            width: 100%;
+            justify-content: center;
         }
 
-        .blue{
-            background:#2563eb;
+        .js-category-wrp {
+            grid-template-columns: 1fr;
         }
 
-        .green{
-            background:#059669;
+        .bulk-actions-bar {
+            flex-direction: column;
         }
 
-        .orange{
-            background:#d97706;
+        .select-all-bar {
+            flex-direction: column;
+            align-items: stretch;
         }
-
-        .purple{
-            background:#7c3aed;
-        }
-
-        .red{
-            background:#dc2626;
-        }
-
-        .table-card{
-            border:none;
-            border-radius:20px;
-            overflow:hidden;
-        }
-
-        .table thead{
-            background:#111827;
-            color:#fff;
-        }
-
-        .table td{
-            vertical-align:middle;
-        }
-
-        .search-box{
-            min-height:50px;
-            border-radius:12px;
-        }
-
-        .badge-status{
-            padding:7px 12px;
-            border-radius:10px;
-            font-size:12px;
-        }
-
-        .active-job{
-            background:#dcfce7;
-            color:#166534;
-        }
-
-        .inactive-job{
-            background:#fee2e2;
-            color:#991b1b;
-        }
-
-        .featured-badge{
-            background:#fef3c7;
-            color:#92400e;
-        }
-
-        .pagination .page-link{
-            border:none;
-            margin:0 3px;
-            border-radius:10px;
-            color:#111827;
-            padding:10px 15px;
-            font-weight:600;
-        }
-
-        .pagination .active .page-link{
-            background:#111827;
-            color:#fff;
-        }
-
-        @media(max-width:992px){
-
-            .main-wrapper{
-                margin-left:80px;
-            }
-        }
-
-    </style>
-
-</head>
-
-<body>
-
-<?php include '../sidebar/sidebar.php'; ?>
+    }
+</style>
 
 <div class="main-wrapper">
-
-    <div class="top-header d-flex justify-content-between align-items-center flex-wrap gap-3">
-
-        <div>
-
-            <h2 class="mb-1">
-                Manage Jobs
-            </h2>
-
-            <small class="text-muted">
-                Manage all scraped jobs, email status, categories and visibility
-            </small>
-
+    <!-- Page Heading -->
+    <div class="page_heading">
+        Manage Jobs
+        <div class="totaljobsheading">
+            Total jobs: <span><?= number_format($totalJobs) ?></span>
         </div>
-
-        <div class="d-flex gap-2 flex-wrap">
-
-            <a href="../run_scraper.php"
-               class="btn btn-success">
-
-                <i class="bi bi-cloud-download me-2"></i>
-
-                Run Scraper
-
-            </a>
-
-            <a href="../cron.php"
-               class="btn btn-dark">
-
-                <i class="bi bi-arrow-repeat me-2"></i>
-
-                Run Full Cron
-
-            </a>
-
-        </div>
-
     </div>
 
+    <!-- Alert Messages -->
     <?php if(isset($_GET['deleted'])): ?>
-
-        <div class="alert alert-danger border-0 shadow-sm">
-
-            Job removed successfully.
-
+        <div class="alert alert-danger alert-custom shadow-sm">
+            <i class="bi bi-check-circle me-2"></i> Job removed successfully.
         </div>
-
     <?php endif; ?>
 
     <?php if(isset($_GET['success'])): ?>
-
-        <div class="alert alert-success border-0 shadow-sm">
-
-            Selected jobs updated successfully.
-
+        <div class="alert alert-success alert-custom shadow-sm">
+            <i class="bi bi-check-circle me-2"></i> Selected jobs updated successfully.
         </div>
-
     <?php endif; ?>
 
-    <div class="row mb-4">
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stats-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Total Jobs
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalJobs) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="icon-box blue">
-
-                        <i class="bi bi-briefcase"></i>
-
-                    </div>
-
+    <!-- Search Section -->
+    <div class="search-section">
+        <form method="GET">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control search-input" placeholder="Search jobs by title, company..." value="<?= htmlspecialchars($search) ?>">
                 </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stats-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Active Jobs
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalActiveJobs) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="icon-box green">
-
-                        <i class="bi bi-check-circle"></i>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stats-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Featured Jobs
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalFeaturedJobs) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="icon-box orange">
-
-                        <i class="bi bi-star"></i>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stats-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Emailed Jobs
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalEmailedJobs) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="icon-box red">
-
-                        <i class="bi bi-envelope-check"></i>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="card table-card shadow-sm mb-4">
-
-        <div class="card-body">
-
-            <form method="GET">
-
-                <div class="row">
-
-                    <div class="col-md-4 mb-3">
-
-                        <input
-                            type="text"
-                            name="search"
-                            class="form-control search-box"
-                            placeholder="Search jobs..."
-                            value="<?= htmlspecialchars($search) ?>"
-                        >
-
-                    </div>
-
-                    <div class="col-md-3 mb-3">
-
-                        <select
-                            name="category"
-                            class="form-select search-box"
-                        >
-
-                            <option value="">
-                                All Categories
+                <div class="col-md-3">
+                    <select name="category" class="form-select search-input">
+                        <option value="">All Categories</option>
+                        <?php foreach($categories as $cat): ?>
+                            <option value="<?= $cat['id'] ?>" <?= $category == $cat['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cat['name']) ?>
                             </option>
-
-                            <?php foreach($categories as $cat): ?>
-
-                                <option
-                                    value="<?= $cat['id'] ?>"
-                                    <?= $category == $cat['id'] ? 'selected' : '' ?>
-                                >
-
-                                    <?= htmlspecialchars($cat['name']) ?>
-
-                                </option>
-
-                            <?php endforeach; ?>
-
-                        </select>
-
-                    </div>
-
-                    <div class="col-md-3 mb-3">
-
-                        <select
-                            name="status"
-                            class="form-select search-box"
-                        >
-
-                            <option value="">
-                                All Status
-                            </option>
-
-                            <option value="active"
-                                <?= $status === 'active' ? 'selected' : '' ?>>
-                                Active
-                            </option>
-
-                            <option value="inactive"
-                                <?= $status === 'inactive' ? 'selected' : '' ?>>
-                                Inactive
-                            </option>
-
-                            <option value="featured"
-                                <?= $status === 'featured' ? 'selected' : '' ?>>
-                                Featured
-                            </option>
-
-                            <option value="emailed"
-                                <?= $status === 'emailed' ? 'selected' : '' ?>>
-                                Emailed
-                            </option>
-
-                            <option value="remote"
-                                <?= $status === 'remote' ? 'selected' : '' ?>>
-                                Remote
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <div class="col-md-2 mb-3">
-
-                        <button
-                            class="btn btn-primary w-100 search-box"
-                        >
-
-                            <i class="bi bi-search me-2"></i>
-
-                            Search Jobs
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </form>
-
-        </div>
-
-    </div>
-
-    <div class="card table-card shadow-sm">
-
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
-
-            <h5 class="mb-0">
-                All Scraped Jobs
-            </h5>
-
-            <span class="badge bg-dark">
-
-                <?= number_format($totalJobs) ?> Jobs
-
-            </span>
-
-        </div>
-
-        <div class="card-body">
-
-            <div class="alert alert-light border mb-3">
-
-                <strong>Tip:</strong>
-
-                Use bulk operations to quickly mark jobs as featured,
-                emailed, active or inactive.
-
-            </div>
-
-            <form method="POST">
-
-                <div class="d-flex gap-2 mb-3 flex-wrap">
-
-                    <select
-                        name="bulk_action"
-                        class="form-select"
-                        style="max-width:280px;"
-                    >
-
-                        <option value="">
-                            Select Bulk Operation
-                        </option>
-
-                        <option value="feature">
-                            Mark as Featured
-                        </option>
-
-                        <option value="unfeature">
-                            Remove Featured Mark
-                        </option>
-
-                        <option value="activate">
-                            Mark as Active
-                        </option>
-
-                        <option value="deactivate">
-                            Mark as Inactive
-                        </option>
-
-                        <option value="mark_emailed">
-                            Mark as Emailed
-                        </option>
-
-                        <option value="mark_not_emailed">
-                            Remove Emailed Mark
-                        </option>
-
-                        <option value="delete">
-                            Delete Selected Jobs
-                        </option>
-
+                        <?php endforeach; ?>
                     </select>
-
-                    <button
-                        type="submit"
-                        class="btn btn-dark"
-                    >
-
-                        Run Operation
-
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select search-input">
+                        <option value="">All Status</option>
+                        <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active Jobs</option>
+                        <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Inactive Jobs</option>
+                        <option value="featured" <?= $status === 'featured' ? 'selected' : '' ?>>Featured Jobs</option>
+                        <option value="emailed" <?= $status === 'emailed' ? 'selected' : '' ?>>Emailed Jobs</option>
+                        <option value="remote" <?= $status === 'remote' ? 'selected' : '' ?>>Remote Jobs</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 search-input">
+                        <i class="bi bi-search me-2"></i>Search
                     </button>
-
                 </div>
-
-                <div class="table-responsive">
-
-                    <table class="table table-hover align-middle">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-
-                                    <input
-                                        type="checkbox"
-                                        id="checkAll"
-                                    >
-
-                                </th>
-
-                                <th>Job</th>
-
-                                <th>Company</th>
-
-                                <th>Category</th>
-
-                                <th>Location</th>
-
-                                <th>Status</th>
-
-                                <th>Date</th>
-
-                                <th>Actions</th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                        <?php if(count($jobs) > 0): ?>
-
-                            <?php foreach($jobs as $job): ?>
-
-                                <tr>
-
-                                    <td>
-
-                                        <input
-                                            type="checkbox"
-                                            name="job_ids[]"
-                                            value="<?= $job['id'] ?>"
-                                        >
-
-                                    </td>
-
-                                    <td>
-
-                                        <div class="fw-semibold">
-
-                                            <?= htmlspecialchars($job['title']) ?>
-
-                                        </div>
-
-                                    </td>
-
-                                    <td>
-
-                                        <?= htmlspecialchars($job['company_name']) ?>
-
-                                    </td>
-
-                                    <td>
-
-                                        <?= htmlspecialchars($job['category_name'] ?? 'Other') ?>
-
-                                    </td>
-
-                                    <td>
-
-                                        <?= htmlspecialchars($job['location']) ?>
-
-                                    </td>
-
-                                    <td>
-
-                                        <?php if(!$job['is_active']): ?>
-
-                                            <span class="badge-status inactive-job">
-
-                                                Inactive
-
-                                            </span>
-
-                                        <?php else: ?>
-
-                                            <span class="badge-status active-job">
-
-                                                Active
-
-                                            </span>
-
-                                        <?php endif; ?>
-
-                                        <?php if($job['is_featured']): ?>
-
-                                            <span class="badge featured-badge mt-1">
-
-                                                Featured
-
-                                            </span>
-
-                                        <?php endif; ?>
-
-                                        <?php if($job['views'] > 0): ?>
-
-                                            <span class="badge bg-primary mt-1">
-
-                                                Emailed
-
-                                            </span>
-
-                                        <?php endif; ?>
-
-                                    </td>
-
-                                    <td>
-
-                                        <?php if(!empty($job['posted_date'])): ?>
-
-                                            <?= date(
-                                                'd M Y',
-                                                strtotime($job['posted_date'])
-                                            ) ?>
-
-                                        <?php else: ?>
-
-                                            N/A
-
-                                        <?php endif; ?>
-
-                                    </td>
-
-                                    <td>
-
-                                        <div class="d-flex gap-2">
-
-                                            <a
-                                                href="<?= htmlspecialchars($job['apply_url']) ?>"
-                                                target="_blank"
-                                                class="btn btn-sm btn-primary"
-                                            >
-
-                                                <i class="bi bi-box-arrow-up-right"></i>
-
-                                            </a>
-
-                                            <a
-                                                href="?delete=<?= $job['id'] ?>"
-                                                onclick="return confirm('Delete this job?')"
-                                                class="btn btn-sm btn-danger"
-                                            >
-
-                                                <i class="bi bi-trash"></i>
-
-                                            </a>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-
-                            <?php endforeach; ?>
-
-                        <?php else: ?>
-
-                            <tr>
-
-                                <td colspan="8" class="text-center py-5">
-
-                                    <div class="text-muted">
-
-                                        <i class="bi bi-database-x fs-1"></i>
-
-                                        <p class="mt-3 mb-0">
-
-                                            No jobs matched your search or filters
-
-                                        </p>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                        <?php endif; ?>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </form>
-
-            <?php if($totalPages > 1): ?>
-
-                <div class="d-flex justify-content-between align-items-center flex-wrap mt-4 gap-3">
-
-                    <div class="text-muted">
-
-                        Page <?= $page ?> of <?= $totalPages ?>
-
-                    </div>
-
-                    <nav>
-
-                        <ul class="pagination mb-0">
-
-                            <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
-
-                                <a
-                                    class="page-link"
-                                    href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>&status=<?= urlencode($status) ?>"
-                                >
-
-                                    Previous
-
-                                </a>
-
-                            </li>
-
-                            <?php for($i = 1; $i <= $totalPages; $i++): ?>
-
-                                <li class="page-item <?= ($page == $i) ? 'active' : '' ?>">
-
-                                    <a
-                                        class="page-link"
-                                        href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>&status=<?= urlencode($status) ?>"
-                                    >
-
-                                        <?= $i ?>
-
-                                    </a>
-
-                                </li>
-
-                            <?php endfor; ?>
-
-                            <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
-
-                                <a
-                                    class="page-link"
-                                    href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>&status=<?= urlencode($status) ?>"
-                                >
-
-                                    Next
-
-                                </a>
-
-                            </li>
-
-                        </ul>
-
-                    </nav>
-
-                </div>
-
-            <?php endif; ?>
-
-        </div>
-
+            </div>
+        </form>
     </div>
 
+    <!-- Bulk Actions Form -->
+    <form method="POST" id="bulkActionForm">
+        <!-- Select All Bar -->
+        <div class="select-all-bar">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="selectAllJobs" style="width: 18px; height: 18px;">
+                <label class="form-check-label fw-semibold ms-2" for="selectAllJobs">Select All Jobs</label>
+            </div>
+            <div class="text-muted" id="selectedCount">0 jobs selected</div>
+            <div class="ms-auto">
+                <select name="bulk_action" class="form-select" style="min-width: 200px;" required>
+                    <option value="">Bulk Actions</option>
+                    <option value="feature">⭐ Mark as Featured</option>
+                    <option value="unfeature">📌 Remove Featured</option>
+                    <option value="activate">✅ Activate</option>
+                    <option value="deactivate">⛔ Deactivate</option>
+                    <option value="mark_emailed">📧 Mark as Emailed</option>
+                    <option value="mark_not_emailed">📭 Remove Emailed</option>
+                    <option value="delete">🗑️ Delete Selected</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-dark">Apply</button>
+        </div>
+
+        <!-- Job Listings - Exactly matching feed page style -->
+        <?php if(count($jobs) > 0): ?>
+            <?php foreach($jobs as $job): ?>
+                <div id="js-jobs-wrapper">
+                    <!-- Checkbox for bulk actions -->
+                    <div class="job-checkbox-wrapper">
+                        <input type="checkbox" name="job_ids[]" value="<?= $job['id'] ?>" class="job-checkbox">
+                    </div>
+                    
+                    <div class="js-toprow">
+                        <div class="js-image">
+                            <img src="//cdn.greatugandajobs.com/jsjobsdata/data/default_logo_company/defaultlogo.png" 
+                                 title="<?= htmlspecialchars($job['company_name']) ?>" 
+                                 style="width:80px; height:80px; object-fit:contain;">
+                        </div>
+                        <div class="js-data">
+                            <div class="js-first-row">
+                                <span class="js-status js-type">Full-time</span>
+                                <?php if((strtotime(date('Y-m-d')) - strtotime($job['posted_date'])) / (60 * 60 * 24) <= 1): ?>
+                                    <span class="js-status bg-new">New</span>
+                                <?php endif; ?>
+                                
+                                <!-- Status Badges -->
+                                <?php if(!$job['is_active']): ?>
+                                    <span class="badge-status badge-inactive">Inactive</span>
+                                <?php else: ?>
+                                    <span class="badge-status badge-active">Active</span>
+                                <?php endif; ?>
+                                
+                                <?php if($job['is_featured']): ?>
+                                    <span class="badge-status badge-featured">Featured</span>
+                                <?php endif; ?>
+                                
+                                <?php if($job['views'] > 0): ?>
+                                    <span class="badge-status badge-emailed">Emailed</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="js-first-row">
+                                <a class="jobtitle" href="<?= htmlspecialchars($job['apply_url']) ?>" target="_blank">
+                                    <?= htmlspecialchars($job['title']) ?>
+                                </a>
+                            </div>
+                            <div class="company-name">
+                                <i class="bi bi-building"></i>
+                                <span><?= htmlspecialchars($job['company_name']) ?></span>
+                                <i class="bi bi-geo-alt ms-2"></i>
+                                <span><?= htmlspecialchars($job['location'] ?: 'Remote') ?></span>
+                            </div>
+                            <div class="js-second-row js-category-wrp">
+                                <div class="js-fields">
+                                    <span class="js-bold">Job Category: </span><?= htmlspecialchars($job['category_name'] ?? 'Other') ?>
+                                </div>
+                                <div class="js-fields">
+                                    <span class="js-bold">Posted: </span><?= !empty($job['posted_date']) ? date('d M Y', strtotime($job['posted_date'])) : 'N/A' ?>
+                                </div>
+                                <?php if($job['views'] > 0): ?>
+                                    <div class="js-fields">
+                                        <span class="js-bold">Emailed to: </span><?= $job['views'] ?> subscriber(s)
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="js-bottomrow">
+                        <div class="js-actions">
+                            <a class="js-button js-btn-apply" href="<?= htmlspecialchars($job['apply_url']) ?>" target="_blank">
+                                <i class="bi bi-eye"></i> View Details & Apply
+                            </a>
+                            <a href="?delete=<?= $job['id'] ?>" onclick="return confirm('Delete this job?')" class="js-button js-btn-delete">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="alert alert-info text-center p-5" style="background: var(--white); border-radius: 14px; box-shadow: var(--shadow-sm);">
+                <i class="bi bi-inbox" style="font-size: 48px; color: var(--primary);"></i>
+                <p class="mt-3 mb-0">No jobs found matching your criteria.</p>
+                <a href="jobs.php" class="btn btn-primary mt-3">Clear Filters</a>
+            </div>
+        <?php endif; ?>
+
+        <!-- Pagination - Matching feed page -->
+        <?php if($totalPages > 1): ?>
+            <ul class="pagination-list">
+                <?php if($page > 1): ?>
+                    <li>
+                        <a href="?page=<?= $page-1 ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>&status=<?= urlencode($status) ?>">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                <?php endif; ?>
+                
+                <?php for($i = max(1, $page-2); $i <= min($totalPages, $page+2); $i++): ?>
+                    <li class="<?= $i == $page ? 'active' : '' ?>">
+                        <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>&status=<?= urlencode($status) ?>">
+                            <?= $i ?>
+                        </a>
+                    </li>
+                <?php endfor; ?>
+                
+                <?php if($page < $totalPages): ?>
+                    <li>
+                        <a href="?page=<?= $page+1 ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>&status=<?= urlencode($status) ?>">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                <?php endif; ?>
+            </ul>
+        <?php endif; ?>
+    </form>
 </div>
 
 <script>
+// Select All functionality
+const selectAllCheckbox = document.getElementById('selectAllJobs');
+const jobCheckboxes = document.querySelectorAll('.job-checkbox');
+const selectedCountSpan = document.getElementById('selectedCount');
 
-document
-.getElementById('checkAll')
-.addEventListener('change', function(){
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.job-checkbox:checked').length;
+    selectedCountSpan.textContent = `${checked} job${checked !== 1 ? 's' : ''} selected`;
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = checked === jobCheckboxes.length && jobCheckboxes.length > 0;
+        selectAllCheckbox.indeterminate = checked > 0 && checked < jobCheckboxes.length;
+    }
+}
 
-    const checkboxes =
-        document.querySelectorAll('input[name="job_ids[]"]');
-
-    checkboxes.forEach(box => {
-
-        box.checked = this.checked;
-
+if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+        jobCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+        updateSelectedCount();
     });
+}
 
+jobCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
 });
 
+updateSelectedCount();
+
+// Confirm before delete
+document.querySelectorAll('.js-btn-delete').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        if (!confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+            e.preventDefault();
+        }
+    });
+});
 </script>
 
 </body>

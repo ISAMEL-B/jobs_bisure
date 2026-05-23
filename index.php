@@ -1,1141 +1,846 @@
 <?php
+// =============================================================
+// LOGIN CHECK 
+// =============================================================
 
-require_once __DIR__ . '/core/database.php';
-
-$db = Database::connect();
-
-/*
-|--------------------------------------------------------------------------
-| DASHBOARD STATS
-|--------------------------------------------------------------------------
-*/
-
-$totalJobs = $db->query("
-    SELECT COUNT(*) as total
-    FROM jobs
-")->fetch()['total'];
-
-$totalSubscribers = $db->query("
-    SELECT COUNT(*) as total
-    FROM subscribers
-")->fetch()['total'];
-
-$totalEmails = $db->query("
-    SELECT COUNT(*) as total
-    FROM email_logs
-")->fetch()['total'];
-
-$totalCategories = $db->query("
-    SELECT COUNT(*) as total
-    FROM job_categories
-")->fetch()['total'];
-
-/*
-|--------------------------------------------------------------------------
-| PAGINATION
-|--------------------------------------------------------------------------
-*/
-
-$jobsPerPage = 10;
-
-$page = isset($_GET['page'])
-    ? (int) $_GET['page']
-    : 1;
-
-if($page < 1){
-
-    $page = 1;
+// Start session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-$offset = ($page - 1) * $jobsPerPage;
+// Define the redirect function
+function redirectToSignin() {
+    header('Location: security/signin.php');
+    exit();
+}
 
-/*
-|--------------------------------------------------------------------------
-| TOTAL PAGES
-|--------------------------------------------------------------------------
-*/
+// Check if user is logged in
+$isLoggedIn = false;
 
-$totalPages = ceil($totalJobs / $jobsPerPage);
+// Common session variable names - check which one you use
+if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+    $isLoggedIn = true;
+} 
 
-/*
-|--------------------------------------------------------------------------
-| FETCH JOBS
-|--------------------------------------------------------------------------
-*/
+// If not logged in, redirect
+if (!$isLoggedIn) {
+    redirectToSignin();
+}
 
-$stmt = $db->prepare("
-    SELECT jobs.*, job_categories.name AS category_name
-    FROM jobs
-    LEFT JOIN job_categories
-    ON jobs.category_id = job_categories.id
-    ORDER BY jobs.id DESC
-    LIMIT :limit OFFSET :offset
-");
+// Optional: Store the requested page to redirect back after login
+$_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
 
-$stmt->bindValue(
-    ':limit',
-    $jobsPerPage,
-    PDO::PARAM_INT
-);
-
-$stmt->bindValue(
-    ':offset',
-    $offset,
-    PDO::PARAM_INT
-);
-
-$stmt->execute();
-
-$latestJobs = $stmt->fetchAll();
-
+// =============================================================
+// INCLUDE EXTERNAL HEADER & NAVIGATION FROM bars/
+// =============================================================
+require_once __DIR__ . '/bars/head_nav.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <title>Uganda Job Aggregator</title>
-
-    <!-- BOOTSTRAP -->
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
-
-    <!-- BOOTSTRAP ICONS -->
-
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-    <style>
-
-        body{
-
-            background:#f1f5f9;
-
-            overflow-x:hidden;
-        }
-
-        .main-wrapper{
-
-            margin-left:260px;
-
-            padding:30px;
-        }
-
-        .top-navbar{
-
-            background:#ffffff;
-
-            border-radius:18px;
-
-            padding:22px 25px;
-
-            margin-bottom:25px;
-
-            box-shadow:0 4px 20px rgba(0,0,0,0.05);
-        }
-
-        .stat-card{
-
-            border:none;
-
-            border-radius:18px;
-
-            overflow:hidden;
-
-            transition:0.3s;
-        }
-
-        .stat-card:hover{
-
-            transform:translateY(-4px);
-        }
-
-        .stat-icon{
-
-            width:60px;
-
-            height:60px;
-
-            border-radius:15px;
-
-            display:flex;
-
-            align-items:center;
-
-            justify-content:center;
-
-            color:#fff;
-
-            font-size:26px;
-        }
-
-        .jobs-bg{
-            background:#2563eb;
-        }
-
-        .subs-bg{
-            background:#059669;
-        }
-
-        .emails-bg{
-            background:#d97706;
-        }
-
-        .cats-bg{
-            background:#7c3aed;
-        }
-
-        .activity-box{
-
-            background:#0f172a;
-
-            color:#e2e8f0;
-
-            min-height:200px;
-
-            max-height:450px;
-
-            overflow:auto;
-
-            font-family:monospace;
-
-            padding:20px;
-
-            border-radius:0 0 18px 18px;
-        }
-
-        .table-card{
-
-            border:none;
-
-            border-radius:18px;
-
-            overflow:hidden;
-        }
-
-        .table thead{
-
-            background:#111827;
-
-            color:#fff;
-        }
-
-        .table td{
-
-            vertical-align:middle;
-        }
-
-        .badge-category{
-
-            background:#2563eb;
-
-            color:#fff;
-
-            padding:6px 12px;
-
-            border-radius:8px;
-
-            font-size:12px;
-        }
-
-        .quick-btn{
-
-            border-radius:12px;
-
-            padding:11px 18px;
-
-            font-weight:600;
-        }
-
-        @media(max-width:992px){
-
-            .main-wrapper{
-
-                margin-left:80px;
-            }
-        }
-        .pagination .page-link{
-
-            border:none;
-
-            margin:0 3px;
-
-            border-radius:10px;
-
-            color:#111827;
-
-            padding:10px 15px;
-
-            font-weight:600;
-        }
-
-        .pagination .active .page-link{
-
-            background:#111827;
-
-            color:#fff;
-        }
-
-        .table tbody tr{
-
-            transition:0.2s;
-        }
-
-        .table tbody tr:hover{
-
-            transform:scale(1.002);
-
-            background:#f8fafc;
-        }
-
-        #jobSearch{
-
-            border-radius:12px;
-
-            border:1px solid #cbd5e1;
-        }
-    </style>
-
-</head>
-
-<body>
-
-<!-- SIDEBAR -->
-
-<?php include 'sidebar/sidebar.php'; ?>
-
-<!-- MAIN CONTENT -->
-
-<div class="main-wrapper">
-
-    <!-- TOP NAVBAR -->
-
-    <div class="top-navbar d-flex justify-content-between align-items-center flex-wrap gap-3">
-
-        <div>
-
-            <h3 class="mb-1">
-                Uganda Job Aggregator
-            </h3>
-
-            <small class="text-muted">
-                Smart Job Scraping & Email Automation System
-            </small>
-
-        </div>
-
-        <div class="d-flex gap-2 flex-wrap">
-
-            <!-- RUN SCRAPER -->
-
-            <button
-                id="runScraperBtn"
-                class="btn btn-success quick-btn d-flex align-items-center gap-2"
-            >
-
-                <span
-                    id="scraperSpinner"
-                    class="spinner-border spinner-border-sm d-none"
-                ></span>
-
-                <i class="bi bi-cloud-download"></i>
-
-                Run Scraper
-
-            </button>
-
-            <!-- SEND EMAILS -->
-
-            <button
-                id="runEmailsBtn"
-                class="btn btn-warning text-white quick-btn d-flex align-items-center gap-2"
-            >
-
-                <span
-                    id="emailsSpinner"
-                    class="spinner-border spinner-border-sm d-none"
-                ></span>
-
-                <i class="bi bi-envelope"></i>
-
-                Send Emails
-
-            </button>
-
-            <!-- RUN FULL CRON -->
-
-            <button
-                id="runCronBtn"
-                class="btn btn-dark quick-btn d-flex align-items-center gap-2"
-            >
-
-                <span
-                    id="cronSpinner"
-                    class="spinner-border spinner-border-sm d-none"
-                ></span>
-
-                <i class="bi bi-arrow-repeat"></i>
-
-                Run Full Cron
-
-            </button>
-
-        </div>
-
-    </div>
-
-    <!-- STATS -->
-
-    <div class="row mb-4">
-
-        <!-- JOBS -->
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stat-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Total Jobs
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalJobs) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="stat-icon jobs-bg">
-
-                        <i class="bi bi-briefcase"></i>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- SUBSCRIBERS -->
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stat-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Subscribers
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalSubscribers) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="stat-icon subs-bg">
-
-                        <i class="bi bi-people"></i>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- EMAILS -->
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stat-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Emails Sent
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalEmails) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="stat-icon emails-bg">
-
-                        <i class="bi bi-envelope-check"></i>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- CATEGORIES -->
-
-        <div class="col-lg-3 col-md-6 mb-3">
-
-            <div class="card stat-card shadow-sm">
-
-                <div class="card-body d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="text-muted">
-                            Categories
-                        </h6>
-
-                        <h2>
-                            <?= number_format($totalCategories) ?>
-                        </h2>
-
-                    </div>
-
-                    <div class="stat-icon cats-bg">
-
-                        <i class="bi bi-tags"></i>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- SYSTEM CONSOLE -->
-
-    <div class="card shadow-sm border-0 mb-4">
-
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-
-            <strong>
-                System Activity Console
-            </strong>
-
-            <button
-                class="btn btn-sm btn-dark"
-                id="toggleConsoleBtn"
-            >
-
-                <i class="bi bi-terminal"></i>
-
-                Show Console
-
-            </button>
-
-        </div>
-
-        <div
-            id="consoleWrapper"
-            style="display:none;"
-        >
-
-            <div
-                class="activity-box"
-                id="systemOutput"
-            >
-
-                Waiting for system activity...
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- LATEST JOBS -->
-
-    <!-- LATEST JOBS -->
-
-    <div class="card table-card shadow-sm border-0">
-
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-
-            <div>
-
-                <h5 class="mb-1">
-                    Latest Jobs
-                </h5>
-
-                <small class="text-muted">
-                    Showing <?= count($latestJobs) ?> jobs from database
-                </small>
-
-            </div>
-
-            <div class="d-flex gap-2">
-
-                <input
-                    type="text"
-                    id="jobSearch"
-                    class="form-control"
-                    placeholder="Search jobs..."
-                    style="width:220px;"
-                >
-
-                <button class="btn btn-dark">
-
-                    <i class="bi bi-search"></i>
-
-                </button>
-
-            </div>
-
-        </div>
-
-        <div class="card-body">
-
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle" id="jobsTable">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>#</th>
-
-                            <th>Job Title</th>
-
-                            <th>Company</th>
-
-                            <th>Category</th>
-
-                            <th>Location</th>
-
-                            <th>Date Posted</th>
-
-                            <th>Status</th>
-
-                            <th>Apply</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                    <?php if(count($latestJobs) > 0): ?>
-
-                        <?php
-                        $counter = $offset + 1;
-                        ?>
-
-                        <?php foreach ($latestJobs as $job): ?>
-
-                            <tr>
-
-                                <td>
-
-                                    <strong>
-                                        <?= $counter++ ?>
-                                    </strong>
-
-                                </td>
-
-                                <td>
-
-                                    <div class="fw-semibold">
-
-                                        <?= htmlspecialchars($job['title']) ?>
-
-                                    </div>
-
-                                </td>
-
-                                <td>
-
-                                    <?= htmlspecialchars($job['company_name']) ?>
-
-                                </td>
-
-                                <td>
-
-                                    <span class="badge-category">
-
-                                        <?= htmlspecialchars($job['category_name'] ?? 'Other') ?>
-
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <i class="bi bi-geo-alt text-danger"></i>
-
-                                    <?= htmlspecialchars($job['location']) ?>
-
-                                </td>
-
-                                <td>
-
-                                    <?= date(
-                                        'd M Y',
-                                        strtotime($job['posted_date'])
-                                    ) ?>
-
-                                </td>
-
-                                <td>
-
-                                    <span class="badge bg-success">
-
-                                        Active
-
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <a
-                                        href="<?= htmlspecialchars($job['apply_url']) ?>"
-                                        target="_blank"
-                                        class="btn btn-primary btn-sm"
-                                    >
-
-                                        <i class="bi bi-box-arrow-up-right"></i>
-
-                                        Apply
-
-                                    </a>
-
-                                </td>
-
-                            </tr>
-
-                        <?php endforeach; ?>
-
-                    <?php else: ?>
-
-                        <tr>
-
-                            <td colspan="8" class="text-center py-5">
-
-                                <div class="text-muted">
-
-                                    <i class="bi bi-database-x fs-1"></i>
-
-                                    <p class="mt-2 mb-0">
-                                        No jobs found
-                                    </p>
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    <?php endif; ?>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            <!-- PAGINATION -->
-
-            <div class="d-flex justify-content-between align-items-center flex-wrap mt-4">
-
-                <div class="text-muted small">
-
-                    Page <?= $page ?> of <?= $totalPages ?>
-
-                </div>
-
-                <nav>
-
-                    <ul class="pagination mb-0">
-
-                        <!-- PREVIOUS -->
-
-                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
-
-                            <a
-                                class="page-link"
-                                href="?page=<?= $page - 1 ?>"
-                            >
-
-                                Previous
-
-                            </a>
-
-                        </li>
-
-                        <!-- PAGE NUMBERS -->
-
-                        <?php for($i = 1; $i <= $totalPages; $i++): ?>
-
-                            <li class="page-item <?= ($page == $i) ? 'active' : '' ?>">
-
-                                <a
-                                    class="page-link"
-                                    href="?page=<?= $i ?>"
-                                >
-
-                                    <?= $i ?>
-
-                                </a>
-
-                            </li>
-
-                        <?php endfor; ?>
-
-                        <!-- NEXT -->
-
-                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
-
-                            <a
-                                class="page-link"
-                                href="?page=<?= $page + 1 ?>"
-                            >
-
-                                Next
-
-                            </a>
-
-                        </li>
-
-                    </ul>
-
-                </nav>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-<!-- JAVASCRIPT -->
-
-<script>
-
-/*
-|--------------------------------------------------------------------------
-| CONSOLE TOGGLE
-|--------------------------------------------------------------------------
-*/
-
-const toggleConsoleBtn =
-    document.getElementById('toggleConsoleBtn');
-
-const consoleWrapper =
-    document.getElementById('consoleWrapper');
-
-let consoleVisible = false;
-
-toggleConsoleBtn.addEventListener('click', function(){
-
-    consoleVisible = !consoleVisible;
-
-    if(consoleVisible){
-
-        consoleWrapper.style.display = 'block';
-
-        toggleConsoleBtn.innerHTML = `
-            <i class="bi bi-eye-slash"></i>
-            Hide Console
-        `;
-
-    } else {
-
-        consoleWrapper.style.display = 'none';
-
-        toggleConsoleBtn.innerHTML = `
-            <i class="bi bi-terminal"></i>
-            Show Console
-        `;
+<?php require_once __DIR__ . '/feed_backend.php'; ?>
+
+<?php
+// The HTML head, header, navigation, and body opening tag 
+// are handled by bars/head_nav.php
+?>
+
+<style>
+    /* Additional page-specific styles that weren't in the external header */
+    .page_heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 16px 20px;
+        background: var(--gradient-1);
+        border-radius: 14px;
+        box-shadow: var(--shadow-md);
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--white);
     }
 
-});
+    .totaljobsheading {
+        background: rgba(255, 255, 255, 0.2);
+        color: var(--white);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+    }
 
-/*
-|--------------------------------------------------------------------------
-| SYSTEM TASK FUNCTION
-|--------------------------------------------------------------------------
-*/
+    .totaljobsheading span {
+        color: var(--white) !important;
+        font-weight: 700;
+    }
 
-function runSystemTask(buttonId, spinnerId, url) {
+    #js-jobs-wrapper {
+        background: var(--white);
+        border-radius: 14px;
+        margin-bottom: 10px;
+        overflow: hidden;
+        transition: 0.3s;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #E8E8F0;
+    }
 
-    const button = document.getElementById(buttonId);
+    #js-jobs-wrapper:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary);
+    }
 
-    const spinner = document.getElementById(spinnerId);
+    .js-toprow {
+        display: flex;
+        gap: 15px;
+        padding: 16px;
+        align-items: flex-start;
+    }
 
-    const output = document.getElementById('systemOutput');
+    .js-image {
+        min-width: 70px;
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | AUTO SHOW CONSOLE
-    |--------------------------------------------------------------------------
-    */
+    .js-image img {
+        width: 70px;
+        height: 70px;
+        border-radius: 10px;
+        object-fit: contain;
+        background: var(--bg-light);
+        border: 2px solid #E8E8F0;
+        padding: 6px;
+        transition: 0.3s;
+    }
 
-    consoleWrapper.style.display = 'block';
+    .js-data {
+        flex: 1;
+    }
 
-    consoleVisible = true;
+    .jobtitle {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--dark);
+        text-decoration: none;
+        line-height: 1.4;
+        transition: 0.3s;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
 
-    toggleConsoleBtn.innerHTML = `
-        <i class="bi bi-eye-slash"></i>
-        Hide Console
-    `;
+    .jobtitle:hover {
+        background: var(--gradient-2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
 
-    spinner.classList.remove('d-none');
+    .js-category-wrp {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 8px;
+    }
 
-    button.disabled = true;
+    .js-fields {
+        background: var(--bg-light);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        border: 1px solid #E8E8F0;
+        transition: 0.3s;
+    }
 
-    output.innerHTML = `
-        <div class="text-info">
-            Running process... please wait...
+    .js-fields:hover {
+        border-color: var(--primary);
+        background: #F0EDFF;
+    }
+
+    .js-bold {
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .js-bottomrow {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 10px 16px;
+        border-top: 1px solid #E8E8F0;
+        background: var(--bg-light);
+    }
+
+    .js-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .js-button {
+        border: none;
+        background: #F0EDFF;
+        color: var(--primary);
+        padding: 8px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 12px;
+        text-decoration: none;
+        transition: 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .js-button:hover {
+        background: var(--primary);
+        color: var(--white);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .js-btn-apply {
+        background: var(--gradient-1);
+        color: var(--white);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .js-btn-apply:hover {
+        background: var(--gradient-1);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .pagination-list {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+        padding: 0;
+    }
+
+    .pagination-list li {
+        list-style: none;
+    }
+
+    .pagination-list li a {
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--white);
+        color: var(--dark);
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+        transition: 0.3s;
+        border: 2px solid #E8E8F0;
+    }
+
+    .pagination-list li.active a {
+        background: var(--gradient-1);
+        color: var(--white);
+        border-color: transparent;
+        box-shadow: var(--shadow-md);
+    }
+
+    .pagination-list li a:hover {
+        background: var(--primary);
+        color: var(--white);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    #back-top {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: var(--gradient-1);
+        color: var(--white);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        box-shadow: var(--shadow-md);
+        transition: 0.3s;
+        z-index: 997;
+        font-size: 20px;
+    }
+
+    #back-top:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    #back-top.backHide {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+    }
+
+    @media(max-width: 768px) {
+        .js-toprow {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 14px;
+        }
+
+        .js-bottomrow {
+            justify-content: center;
+        }
+
+        .js-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .js-button {
+            width: 100%;
+            text-align: center;
+        }
+
+        .page_heading {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .js-category-wrp {
+            grid-template-columns: 1fr;
+        }
+
+        #back-top {
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+        }
+    }
+
+    #tellafriend {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
+        z-index: 9999;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+    }
+
+    #tellafriend_headline {
+        background: var(--gradient-1);
+        color: var(--white);
+        padding: 12px 16px;
+        font-size: 16px;
+        font-weight: 700;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .closeimg {
+        width: 14px;
+        float: right;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .closeimg:hover {
+        transform: rotate(90deg);
+    }
+
+    #borderfieldwrapper {
+        background: var(--white);
+        padding: 16px;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .fieldwrapper {
+        margin-bottom: 12px;
+    }
+
+    .fieldtitle {
+        margin-bottom: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .fieldvalue input,
+    .fieldvalue textarea {
+        width: 100%;
+        border: 2px solid #E8E8F0;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 13px;
+        background: var(--bg-light);
+        transition: 0.3s;
+    }
+
+    .fieldvalue textarea {
+        min-height: 70px;
+        resize: vertical;
+    }
+
+    .fieldvalue input:focus,
+    .fieldvalue textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: var(--white);
+        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+    }
+
+    .js_job_tellafreind_button {
+        border: none;
+        border-radius: 20px;
+        padding: 8px 14px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .js_job_tellafreind_button.save {
+        background: var(--gradient-1);
+        color: var(--white);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .js_job_tellafreind_button.save:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .js_job_tellafreind_button:not(.save) {
+        background: #E8E8F0;
+        color: var(--dark);
+    }
+
+    .js_job_tellafreind_button:not(.save):hover {
+        background: #D1D1E0;
+    }
+
+    #js_job_black_friend {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 9998;
+    }
+
+    #customToast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        color: #fff;
+        padding: 14px 18px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 280px;
+        max-width: 380px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        z-index: 999999;
+        transform: translateX(120%);
+        opacity: 0;
+        transition: all 0.4s ease;
+        font-family: inherit;
+    }
+
+    #customToast.show {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .toast-success {
+        background: linear-gradient(135deg, #00B894 0%, #00CEC9 100%);
+    }
+
+    .toast-error {
+        background: linear-gradient(135deg, #FF7675 0%, #D63031 100%);
+    }
+
+    @media(max-width: 576px) {
+        #customToast {
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            min-width: auto;
+            max-width: none;
+        }
+    }
+</style>
+
+<!-- Main Container - Page Specific Content -->
+<section id="g-container-main" class="g-wrapper">
+    <div class="g-grid">
+        <!-- Sidebar Left -->
+        <div class="g-block size-23">
         </div>
-    `;
 
-    fetch(url)
+        <!-- Main Content Area -->
+        <div class="g-block size-54">
+            <section id="g-mainbar">
+                <div class="g-grid">
+                    <div class="g-block size-100">
+                        <div class="g-system-messages">
+                            <div id="system-message-container" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="g-grid">
+                    <div class="g-block size-100 g-flushed">
+                        <div class="g-content">
+                            <div class="platform-content container">
+                                <div class="row">
+                                    <div class="col">
+                                        <div id="js_jobs_main_wrapper">
+                                            <div id="js_job_black_friend" style="display:none;"></div>
+                                            
+                                            <!-- Tell A Friend Popup -->
+                                            <div id="tellafriend" class="tellafriend" style="display:none;">
+                                                <form action="index.php" method="POST">
+                                                    <div id="tellafriend_headline">Tell A Friend 
+                                                        <img class="closeimg" onclick="closetellafriend();" src="//cdn.greatugandajobs.com/components/com_jsjobs/images/popup-close.png" alt="Close">
+                                                    </div>
+                                                    <div id="borderfieldwrapper">
+                                                        <div class="fieldwrapper">
+                                                            <div class="fieldtitle">Your Name<font color="red">*</font></div>
+                                                            <div class="fieldvalue">
+                                                                <input class="inputbox required" type="text" name="sendername" id="sendername">
+                                                            </div>
+                                                        </div>
+                                                        <div class="fieldwrapper">
+                                                            <div class="fieldtitle">Your Email<font color="red">*</font></div>
+                                                            <div class="fieldvalue">
+                                                                <input class="inputbox required" type="text" name="senderemail" id="senderemail">
+                                                            </div>
+                                                        </div>
+                                                        <div class="fieldwrapper">
+                                                            <div class="fieldtitle">Job Link<font color="red">*</font></div>
+                                                            <div class="fieldvalue">
+                                                                <input class="inputbox required" type="text" name="joblink" id="joblink" disabled style="background:#f0f0f0; color:#6C5CE7; font-size:12px;">
+                                                            </div>
+                                                        </div>
+                                                        <div class="fieldwrapper">
+                                                            <div class="fieldtitle">Friend Email<font color="red">*</font></div>
+                                                            <div class="fieldvalue">
+                                                                <input class="inputbox required validate-email" type="text" name="email1" id="email1">
+                                                            </div>
+                                                        </div>
+                                                        <div class="fieldwrapper">
+                                                            <div class="fieldtitle">Message<font color="red">*</font></div>
+                                                            <div class="fieldvalue">
+                                                                <textarea class="inputbox required" name="message" id="message" rows="3" maxlength="250"></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="fieldwrapper fullwidth button">
+                                                            <input class="js_job_tellafreind_button save" type="button" onclick="friendValidate();" value="Send To Friends">
+                                                            <input class="js_job_tellafreind_button" type="button" onclick="closetellafriend();" value="Close">
+                                                        </div>
+                                                        <input type="hidden" name="jobid" id="jobid">
+                                                    </div>
+                                                </form>
+                                            </div>
 
-    .then(response => response.text())
+                                            <div id="jsjobs-wrapper">
+                                                <div class="page_heading">
+                                                    Jobs in Uganda 
+                                                    <div class="totaljobsheading">
+                                                        Total jobs: <span><?= number_format($totalJobs) ?></span>
+                                                    </div>
+                                                </div>
+                                                <div class="jsjobs-breadcrunbs-wrp js-breadcrunbs">
+                                                </div>
 
-    .then(data => {
+                                                <!-- Dynamic Job Listings -->
+                                                <?php if(count($jobs) > 0): ?>
+                                                    <?php foreach($jobs as $job): ?>
+                                                        <div id="js-jobs-wrapper">
+                                                            <div class="js-toprow">
+                                                                <div class="js-image">
+                                                                    <a href="/jobs/company-detail/company-<?= urlencode($job['company_name']) ?>-<?= $job['id'] ?>/nav-31">
+                                                                        <img src="//cdn.greatugandajobs.com/jsjobsdata/data/default_logo_company/defaultlogo.png" 
+                                                                             title="<?= htmlspecialchars($job['company_name']) ?>" 
+                                                                             style="width:80px; height:80px; object-fit:contain;">
+                                                                    </a>
+                                                                </div>
+                                                                <div class="js-data">
+                                                                    <div class="js-first-row">
+                                                                        <span class="js-col-xs-12 js-col-md-6 js-title js-title-tablet">
+                                                                            <span class="js-status js-type">Full-time</span>
+                                                                            <?php if((strtotime(date('Y-m-d')) - strtotime($job['posted_date'])) / (60 * 60 * 24) <= 1): ?>
+                                                                                <span class="js-status bg-new" style="background:var(--danger); color:var(--white); padding:2px 8px; border-radius:4px;">New</span>
+                                                                            <?php endif; ?>
+                                                                        </span>
+                                                                    </div>
+                                                                    <div class="js-first-row">
+                                                                        <span class="js-col-xs-12 js-col-md-6 js-title js-title-tablet">
+                                                                            <a class="jobtitle" href="<?= htmlspecialchars($job['apply_url']) ?>" target="_blank">
+                                                                                <?= htmlspecialchars($job['title']) ?> job at <?= htmlspecialchars($job['company_name']) ?>
+                                                                            </a>
+                                                                        </span>
+                                                                    </div>
+                                                                    <div class="js-second-row js-category-wrp">
+                                                                        <div class="js-col-xs-12 js-col-md-5 js-fields">
+                                                                            <span class="js-bold">Job Category: </span><?= htmlspecialchars($job['category_name'] ?? 'Other') ?> jobs in Uganda
+                                                                        </div>
+                                                                        <div class="js-col-xs-12 js-col-md-5 js-fields">
+                                                                            <span class="js-bold">Posted: </span><?= date('d M Y', strtotime($job['posted_date'])) ?>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="js-bottomrow">
+                                                                <div class="js-col-xs-12 js-col-md-8 js-address"></div>
+                                                                <div class="js-col-xs-12 js-col-md-4 js-actions">
+                                                                    <button type="button" class="js-button" onclick="showtellafriend('<?= $job['id'] ?>','<?= htmlspecialchars($job['apply_url']) ?>');" style="cursor:pointer;">
+                                                                        <i class="bi bi-share"></i> Tell A Friend
+                                                                    </button>
+                                                                    <a class="js-button js-btn-apply" href="<?= htmlspecialchars($job['apply_url']) ?>" target="_blank">
+                                                                        <i class="bi bi-eye"></i> View Details & Apply
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <div class="alert alert-info text-center p-5" style="background: var(--white); border-radius: 14px; box-shadow: var(--shadow-sm);">
+                                                        <i class="bi bi-info-circle" style="font-size: 24px; color: var(--primary);"></i>
+                                                        <p class="mt-2">No jobs found matching your criteria.</p>
+                                                    </div>
+                                                <?php endif; ?>
 
-        output.innerHTML = data;
+                                                <!-- Pagination -->
+                                                <?php if($totalPages > 1): ?>
+                                                    <ul class="pagination-list">
+                                                        <?php if($page > 1): ?>
+                                                            <li>
+                                                                <a href="?page=<?= $page-1 ?>&search=<?= urlencode($search) ?>&location=<?= urlencode($location) ?>&category=<?= urlencode($category) ?>">
+                                                                    <i class="bi bi-chevron-left"></i>
+                                                                </a>
+                                                            </li>
+                                                        <?php endif; ?>
+                                                        
+                                                        <?php for($i = max(1, $page-2); $i <= min($totalPages, $page+2); $i++): ?>
+                                                            <li class="<?= $i == $page ? 'active' : '' ?>">
+                                                                <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&location=<?= urlencode($location) ?>&category=<?= urlencode($category) ?>">
+                                                                    <?= $i ?>
+                                                                </a>
+                                                            </li>
+                                                        <?php endfor; ?>
+                                                        
+                                                        <?php if($page < $totalPages): ?>
+                                                            <li>
+                                                                <a href="?page=<?= $page+1 ?>&search=<?= urlencode($search) ?>&location=<?= urlencode($location) ?>&category=<?= urlencode($category) ?>">
+                                                                    <i class="bi bi-chevron-right"></i>
+                                                                </a>
+                                                            </li>
+                                                        <?php endif; ?>
+                                                    </ul>
+                                                <?php endif; ?>
+                                                
+                                                <a class="scrolltask" data-scrolltask="getNextJobs" data-offset="1"></a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
 
-    })
+        <!-- Sidebar Right -->
+        <div class="g-block size-23">
+            <aside id="g-aside">
+                <div class="g-grid">
+                    <div class="g-block size-100 hidden-phone">
+                        <div class="g-content">
+                            <div class="platform-content">
+                                <div class="floatingmoduleck" id="floatingmoduleck107">
+                                    <div class="floatingmoduleck-inner">
+                                        <div class="aside jl-panel moduletable sticky">
+                                            <div id="mod-custom107" class="mod-custom custom">
+                                                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5839100731048282" crossorigin="anonymous"></script>
+                                                <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-5839100731048282" data-ad-slot="4560494900" data-ad-format="auto" data-full-width-responsive="true"></ins>
+                                                <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
 
-    .catch(error => {
+<!-- Back to Top Button -->
+<a id="back-top" href="#" class="back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="bi bi-arrow-up"></i>
+</a>
 
-        output.innerHTML = `
-            <div class="text-danger">
-                Error: ${error}
-            </div>
-        `;
+<!-- JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="feed_tell_friend_modal_js.js"></script>
 
-    })
+<script>
+    // Back to Top Button
+    var backToTop = document.getElementById('back-top');
+    if(backToTop) {
+        window.onscroll = function() {
+            if(document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) {
+                backToTop.classList.remove('backHide');
+            } else {
+                backToTop.classList.add('backHide');
+            }
+        };
+        backToTop.onclick = function(e) { 
+            e.preventDefault(); 
+            window.scrollTo({top: 0, behavior: 'smooth'}); 
+        };
+    }
 
-    .finally(() => {
-
-        spinner.classList.add('d-none');
-
-        button.disabled = false;
-
+    // Tell A Friend Modal
+    jQuery(document).ready(function($) {
+        $("div#js_job_black_friend").click(function() {
+            $("div#tellafriend").fadeOut();
+            $("div#js_job_black_friend").fadeOut();
+        });
     });
-}
 
-/*
-|--------------------------------------------------------------------------
-| RUN SCRAPER
-|--------------------------------------------------------------------------
-*/
+    function closetellafriend() {
+        jQuery('#tellafriend').slideUp("slow");
+        jQuery('#js_job_black_friend').fadeOut();
+    }
+    
+    function showtellafriend(jobid, joburl) {
+        jQuery('#js_job_black_friend').fadeIn();
+        jQuery('#tellafriend').slideDown("slow");
+        document.getElementById('jobid').value = jobid;
+        document.getElementById('joblink').value = joburl;
+    }
+    
+    function friendValidate() {
+        let sendername  = document.getElementById('sendername').value.trim();
+        let senderemail = document.getElementById('senderemail').value.trim();
+        let email1      = document.getElementById('email1').value.trim();
+        let message     = document.getElementById('message').value.trim();
+        let jobid       = document.getElementById('jobid').value.trim();
+        let joblink     = document.getElementById('joblink').value.trim();
 
-document
-.getElementById('runScraperBtn')
-.addEventListener('click', function(){
-
-    runSystemTask(
-        'runScraperBtn',
-        'scraperSpinner',
-        'run_scraper.php'
-    );
-
-});
-
-/*
-|--------------------------------------------------------------------------
-| SEND EMAILS
-|--------------------------------------------------------------------------
-*/
-
-document
-.getElementById('runEmailsBtn')
-.addEventListener('click', function(){
-
-    runSystemTask(
-        'runEmailsBtn',
-        'emailsSpinner',
-        'send_emails.php'
-    );
-
-});
-
-/*
-|--------------------------------------------------------------------------
-| RUN FULL CRON
-|--------------------------------------------------------------------------
-*/
-
-document
-.getElementById('runCronBtn')
-.addEventListener('click', function(){
-
-    runSystemTask(
-        'runCronBtn',
-        'cronSpinner',
-        'cron.php'
-    );
-
-});
-
-/*
-|--------------------------------------------------------------------------
-| LIVE SEARCH / AUTOCOMPLETE FILTER
-|--------------------------------------------------------------------------
-*/
-
-const jobSearch =
-    document.getElementById('jobSearch');
-
-const jobsTable =
-    document.getElementById('jobsTable');
-
-const tableRows =
-    jobsTable.querySelectorAll('tbody tr');
-
-jobSearch.addEventListener('keyup', function(){
-
-    const searchValue =
-        this.value.toLowerCase().trim();
-
-    let visibleCount = 0;
-
-    tableRows.forEach(function(row){
-
-        const columns =
-            row.querySelectorAll('td');
-
-        /*
-        |--------------------------------------------------------------------------
-        | SKIP EMPTY ROW
-        |--------------------------------------------------------------------------
-        */
-
-        if(columns.length < 8){
+        if (sendername === '') {
+            alert('Your name is required');
+            return;
+        }
+        if (senderemail === '') {
+            alert('Your email is required');
+            return;
+        }
+        if (email1 === '') {
+            alert('Friend email is required');
+            return;
+        }
+        if (message === '') {
+            alert('Message is required');
             return;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | TARGET COLUMNS
-        |--------------------------------------------------------------------------
-        */
+        const btn = document.querySelector('.js_job_tellafreind_button.save');
+        btn.disabled = true;
+        btn.value = 'Sending...';
 
-        const title =
-            columns[1].innerText.toLowerCase();
-
-        const company =
-            columns[2].innerText.toLowerCase();
-
-        const category =
-            columns[3].innerText.toLowerCase();
-
-        const location =
-            columns[4].innerText.toLowerCase();
-
-        /*
-        |--------------------------------------------------------------------------
-        | MATCH SEARCH
-        |--------------------------------------------------------------------------
-        */
-
-        const matches =
-            title.includes(searchValue) ||
-            company.includes(searchValue) ||
-            category.includes(searchValue) ||
-            location.includes(searchValue);
-
-        if(matches){
-
-            row.style.display = '';
-
-            visibleCount++;
-
-        } else {
-
-            row.style.display = 'none';
-        }
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | NO RESULTS MESSAGE
-    |--------------------------------------------------------------------------
-    */
-
-    let noResults =
-        document.getElementById('noResultsRow');
-
-    if(visibleCount === 0){
-
-        if(!noResults){
-
-            noResults = document.createElement('tr');
-
-            noResults.id = 'noResultsRow';
-
-            noResults.innerHTML = `
-                <td colspan="8" class="text-center py-5">
-
-                    <div class="text-muted">
-
-                        <i class="bi bi-search fs-1"></i>
-
-                        <p class="mt-3 mb-0">
-                            No matching jobs found
-                        </p>
-
-                    </div>
-
-                </td>
-            `;
-
-            jobsTable
-            .querySelector('tbody')
-            .appendChild(noResults);
-        }
-
-    } else {
-
-        if(noResults){
-            noResults.remove();
-        }
+        $.ajax({
+            url: 'email_friend.php',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                sendername: sendername,
+                senderemail: senderemail,
+                email1: email1,
+                message: message,
+                jobid: jobid,
+                joblink: joblink
+            },
+            success: function(response) {
+                if (response.success) {
+                    showToast('Job email sent to your friend successfully!');
+                    document.getElementById('sendername').value = '';
+                    document.getElementById('senderemail').value = '';
+                    document.getElementById('email1').value = '';
+                    document.getElementById('message').value = '';
+                    document.getElementById('jobid').value = '';
+                    document.getElementById('joblink').value = '';
+                    closetellafriend();
+                } else {
+                    showToast(response.message, 'error');
+                }
+                btn.disabled = false;
+                btn.value = 'Send To Friends';
+            },
+            error: function(xhr, status, error) {
+                console.log('AJAX Error:', xhr.responseText);
+                alert('AJAX ERROR:\n\nStatus: ' + status + '\nError: ' + error);
+                btn.disabled = false;
+                btn.value = 'Send To Friends';
+            }
+        });
     }
-
-});
-
-/*
-|--------------------------------------------------------------------------
-| AUTO FOCUS SEARCH
-|--------------------------------------------------------------------------
-*/
-
-window.addEventListener('load', function(){
-
-    jobSearch.focus();
-
-});
-
+    
+    function showToast(message, type = 'success') {
+        const oldToast = document.getElementById('customToast');
+        if (oldToast) {
+            oldToast.remove();
+        }
+        
+        const toast = document.createElement('div');
+        toast.id = 'customToast';
+        
+        if (type === 'error') {
+            toast.classList.add('toast-error');
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                </div>
+                <div class="toast-message">
+                    ${message}
+                </div>
+            `;
+        } else {
+            toast.classList.add('toast-success');
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="toast-message">
+                    ${message}
+                </div>
+            `;
+        }
+        
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400);
+        }, 4000);
+    }
 </script>
 
 </body>

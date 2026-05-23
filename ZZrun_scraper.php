@@ -1,27 +1,5 @@
 <?php
 
-session_start();
-
-/*
-|--------------------------------------------------------------------------
-| AUTHENTICATION CHECK
-|--------------------------------------------------------------------------
-|
-| Redirect users who are not logged in
-|
-*/
-
-if (
-    !isset($_SESSION['user_id'])
-    ||
-    empty($_SESSION['user_id'])
-) {
-
-    header("Location: /jobaggregator/security/signin.php");
-
-    exit;
-}
-;
 require_once __DIR__ . '/core/functions.php';
 
 writeLog(

@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Define the redirect function
 function redirectToSignin() {
-    header('Location: ../security/signin.php');
+    header('Location: ../security/signin');
     exit();
 }
 
@@ -47,7 +47,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'Admin') {
     die("
         <div style='padding:40px;font-family:Arial; text-align:center;'>
             <h2>Access Denied</h2>
-            <p>Only administrators can manage users. <a href='../index.php'>Return to Dashboard</a></p>
+            <p>Only administrators can manage users. <a href='../'>Return to Dashboard</a></p>
         </div>
     ");
 }
@@ -63,14 +63,14 @@ if (isset($_GET['delete'])) {
     
     // prevent self delete
     if ($userId == $_SESSION['user_id']) {
-        header("Location: users.php?self_delete=1");
+        header("Location: users?self_delete=1");
         exit;
     }
     
     $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     
-    header("Location: users.php?deleted=1");
+    header("Location: users?deleted=1");
     exit;
 }
 
@@ -84,7 +84,7 @@ if (isset($_POST['delete_all_users'])) {
     $stmt = $db->prepare("DELETE FROM users WHERE id != ?");
     $stmt->execute([$_SESSION['user_id']]);
     
-    header("Location: users.php?all_deleted=1");
+    header("Location: users?all_deleted=1");
     exit;
 }
 
@@ -104,7 +104,7 @@ if (isset($_GET['toggle'])) {
     ");
     $stmt->execute([$userId]);
     
-    header("Location: users.php?status=1");
+    header("Location: users?status=1");
     exit;
 }
 
@@ -123,7 +123,7 @@ if (isset($_POST['change_role'])) {
         $stmt = $db->prepare("UPDATE users SET role = ? WHERE id = ?");
         $stmt->execute([$newRole, $userId]);
         
-        header("Location: users.php?role_updated=1");
+        header("Location: users?role_updated=1");
         exit;
     }
 }
@@ -143,7 +143,7 @@ if (isset($_POST['change_password'])) {
         $stmt = $db->prepare("UPDATE users SET password = ? WHERE id = ?");
         $stmt->execute([$hashedPassword, $userId]);
         
-        header("Location: users.php?password_updated=1");
+        header("Location: users?password_updated=1");
         exit;
     }
 }
@@ -832,7 +832,7 @@ $number = ($page - 1) * $perPage + 1;
                     </button>
                 </div>
                 <div class="col-md-2">
-                    <a href="users.php" class="btn btn-light border w-100 search-input">
+                    <a href="users" class="btn btn-light border w-100 search-input">
                         <i class="bi bi-x-circle me-2"></i> Clear
                     </a>
                 </div>
@@ -937,7 +937,7 @@ $number = ($page - 1) * $perPage + 1;
             <div class="alert alert-info text-center p-5" style="background: var(--white); border-radius: 14px; box-shadow: var(--shadow-sm);">
                 <i class="bi bi-people" style="font-size: 48px; color: var(--primary);"></i>
                 <p class="mt-3 mb-0">No users found matching your criteria.</p>
-                <a href="users.php" class="btn btn-primary mt-3">Clear Filters</a>
+                <a href="users" class="btn btn-primary mt-3">Clear Filters</a>
             </div>
         <?php endif; ?>
     </div>
@@ -971,6 +971,8 @@ $number = ($page - 1) * $perPage + 1;
         </ul>
     <?php endif; ?>
 </div>
+
+<?php require_once __DIR__ . '/../bars/footer.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

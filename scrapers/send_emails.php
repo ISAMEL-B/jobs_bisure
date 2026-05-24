@@ -434,7 +434,7 @@ function buildStyledJobsEmailTemplate($jobs) {
                 <hr>
 
                 <!-- Floating All Jobs Button -->
-                <a href="https://bisurejobs.22web.org/feed_landing_all.php" 
+                <a href="https://bisurejobs.22web.org/feed_landing_all" 
                 class="floating-btn" 
                 target="_blank">
                     📋 View All Jobs
@@ -451,8 +451,8 @@ function buildStyledJobsEmailTemplate($jobs) {
             <div class="email-footer">
                 <p>© ' . date('Y') . ' BISure Jobs. All rights reserved.</p>
                 <p>You\'re receiving this email because you subscribed to job alerts.</p>
-                <p><a href="https://bisurejobs.22web.org/unsubscribe.php">Unsubscribe</a> | 
-                   <a href="https://bisurejobs.22web.org/manage/subscribe.php">Manage Preferences</a></p>
+                <p><a href="https://bisurejobs.22web.org/unsubscribe">Unsubscribe</a> | 
+                   <a href="https://bisurejobs.22web.org/manage/subscribe">Manage Preferences</a></p>
             </div>
         </div>
         

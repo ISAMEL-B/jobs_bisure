@@ -1,0 +1,20 @@
+project/
+│
+├── core/
+│   ├── config.php
+│   ├── database.php
+│   ├── functions.php
+│   ├── mailer.php
+│   └── categories.php
+│
+├── scrapers/
+│   └── jobadverts.php
+│
+├── logs/
+│   ├── errors.log
+│   └── scraper.log
+│
+├── index.php
+├── run_scraper.php
+├── send_emails.php
+└── cron.php

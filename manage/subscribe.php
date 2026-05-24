@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Define the redirect function
 function redirectToSignin() {
-    header('Location: ../security/signin.php');
+    header('Location: ../security/signin');
     exit();
 }
 
@@ -52,7 +52,7 @@ if (isset($_GET['delete'])) {
     $stmt = $db->prepare("DELETE FROM subscribers WHERE id = ?");
     $stmt->execute([$subscriberId]);
 
-    header("Location: subscribe.php?deleted=1");
+    header("Location: subscribe?deleted=1");
     exit;
 }
 
@@ -72,7 +72,7 @@ if (isset($_GET['toggle'])) {
     ");
     $stmt->execute([$subscriberId]);
 
-    header("Location: subscribe.php?updated=1");
+    header("Location: subscribe?updated=1");
     exit;
 }
 
@@ -1066,7 +1066,7 @@ $number = ($page - 1) * $perPage + 1;
                     <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Inactive</option>
                 </select>
                 <button type="submit" class="btn-primary" style="margin:0;">Filter</button>
-                <a href="subscribe.php" class="btn-secondary" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">Reset</a>
+                <a href="subscribe" class="btn-secondary" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">Reset</a>
             </form>
 
             <!-- Bulk Actions -->
@@ -1208,6 +1208,8 @@ $number = ($page - 1) * $perPage + 1;
     </div>
 </div>
 
+<?php require_once __DIR__ . '/../bars/footer.php'; ?>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
     // Accordion Function
@@ -1229,7 +1231,7 @@ $number = ($page - 1) * $perPage + 1;
     // Modal functions
     function viewSubscriber(id) {
         $.ajax({
-            url: 'subscribe.php?get_subscriber=' + id,
+            url: 'subscribe?get_subscriber=' + id,
             type: 'GET',
             dataType: 'json',
             success: function(data) {
@@ -1293,7 +1295,7 @@ $number = ($page - 1) * $perPage + 1;
     $('#updateDetailsForm').on('submit', function(e) {
         e.preventDefault();
         $.ajax({
-            url: 'subscribe.php',
+            url: 'subscribe',
             type: 'POST',
             data: $(this).serialize() + '&update_details=1',
             dataType: 'json',
@@ -1310,7 +1312,7 @@ $number = ($page - 1) * $perPage + 1;
     $('#updateCategoriesForm').on('submit', function(e) {
         e.preventDefault();
         $.ajax({
-            url: 'subscribe.php',
+            url: 'subscribe',
             type: 'POST',
             data: $(this).serialize() + '&update_categories=1',
             dataType: 'json',
@@ -1326,7 +1328,7 @@ $number = ($page - 1) * $perPage + 1;
     // Toggle status
     function toggleSubscriberStatus(id, btn) {
         $.ajax({
-            url: 'subscribe.php?toggle_ajax=' + id,
+            url: 'subscribe?toggle_ajax=' + id,
             type: 'GET',
             dataType: 'json',
             success: function(response) {

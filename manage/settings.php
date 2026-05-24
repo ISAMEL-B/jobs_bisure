@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Define the redirect function
 function redirectToSignin() {
-    header('Location: ../security/signin.php');
+    header('Location: ../security/signin');
     exit();
 }
 
@@ -558,6 +558,8 @@ $totalEmails = $db->query("SELECT COUNT(*) total FROM email_logs")->fetch()['tot
         </div>
     </div>
 </div>
+
+<?php require_once __DIR__ . '/../bars/footer.php'; ?>
 
 <script>
 // Auto-submit when toggles are changed

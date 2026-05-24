@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Define the redirect function
 function redirectToSignin() {
-    header('Location: ../security/signin.php');
+    header('Location: ../security/signin');
     exit();
 }
 
@@ -466,7 +466,7 @@ $pendingJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 0")
 
     <!-- Quick Actions Grid -->
     <div class="actions-grid">
-        <a href="<?= MY_BASE_URL ?>/scrapers/run_scraper.php" class="action-card success" onclick="showToast('Starting scraper...', 'info');">
+        <a href="<?= MY_BASE_URL ?>/scrapers/scraper" class="action-card success" onclick="showToast('Starting scraper...', 'info');">
             <div class="action-icon">
                 <i class="bi bi-cloud-download"></i>
             </div>
@@ -475,7 +475,7 @@ $pendingJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 0")
             <span class="action-stats"><i class="bi bi-arrow-repeat"></i> Instant</span>
         </a>
 
-        <a href="<?= MY_BASE_URL ?>/scrapers/send_emails.php" class="action-card warning" onclick="showToast('Preparing to send emails...', 'info');">
+        <a href="<?= MY_BASE_URL ?>/scrapers/send_emails" class="action-card warning" onclick="showToast('Preparing to send emails...', 'info');">
             <div class="action-icon">
                 <i class="bi bi-envelope-paper"></i>
             </div>
@@ -484,7 +484,7 @@ $pendingJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 0")
             <span class="action-stats"><i class="bi bi-people"></i> <?= number_format($totalSubscribers) ?> subscribers</span>
         </a>
 
-        <a href="<?= MY_BASE_URL ?>/scrapers/run_full_cron.php" class="action-card dark" onclick="showToast('Executing full cron job...', 'info');">
+        <a href="<?= MY_BASE_URL ?>/scrapers/scraper" class="action-card dark" onclick="showToast('Executing full cron job...', 'info');">
             <div class="action-icon">
                 <i class="bi bi-arrow-repeat"></i>
             </div>
@@ -493,7 +493,7 @@ $pendingJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 0")
             <span class="action-stats"><i class="bi bi-gear"></i> Complete sync</span>
         </a>
 
-        <a href="<?= MY_BASE_URL ?>/manage/subscribe.php" class="action-card primary" onclick="showToast('Loading subscriber form...', 'info');">
+        <a href="<?= MY_BASE_URL ?>/manage/subscribe" class="action-card primary" onclick="showToast('Loading subscriber form...', 'info');">
             <div class="action-icon">
                 <i class="bi bi-person-plus"></i>
             </div>
@@ -502,7 +502,7 @@ $pendingJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 0")
             <span class="action-stats"><i class="bi bi-plus-circle"></i> New user</span>
         </a>
 
-        <a href="<?= MY_BASE_URL ?>/manage/jobs.php" class="action-card info" onclick="showToast('Loading jobs manager...', 'info');">
+        <a href="<?= MY_BASE_URL ?>/manage/jobs" class="action-card info" onclick="showToast('Loading jobs manager...', 'info');">
             <div class="action-icon">
                 <i class="bi bi-briefcase"></i>
             </div>
@@ -511,7 +511,7 @@ $pendingJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 0")
             <span class="action-stats"><i class="bi bi-files"></i> <?= number_format($totalJobs) ?> jobs</span>
         </a>
 
-        <a href="<?= MY_BASE_URL ?>/manage/categories.php" class="action-card" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+        <a href="<?= MY_BASE_URL ?>/manage/categories" class="action-card" style="background: linear-gradient(135deg, #667eea, #764ba2);">
             <div class="action-icon">
                 <i class="bi bi-tags"></i>
             </div>
@@ -570,6 +570,7 @@ $pendingJobs = $db->query("SELECT COUNT(*) total FROM jobs WHERE is_active = 0")
         </div>
     </div>
 </div>
+<?php require_once __DIR__ . '/../bars/footer.php'; ?>
 
 <!-- Toast Notification -->
 <style>

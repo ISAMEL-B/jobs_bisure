@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_role'] = $user['role'];
 
             // Redirect to dashboard or stored page
-            $redirect = $_SESSION['redirect_after_login'] ?? '../index.php';
+            $redirect = $_SESSION['redirect_after_login'] ?? '../';
             unset($_SESSION['redirect_after_login']);
             header("Location: $redirect");
             exit;
@@ -559,7 +559,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
 
                 <div class="login-links">
-                    <a href="/jobaggregator/mailing/password_recovery.php">
+                    <a href="/jobaggregator/mailing/password_recovery">
                         <i class="bi bi-key-fill"></i> Forgot Password?
                     </a>
                     <a href="#">

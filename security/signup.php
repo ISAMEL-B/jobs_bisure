@@ -571,7 +571,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Links -->
                 <div class="bottom-links">
-                    <p>Already have an account? <a href="signin.php">Sign In Here</a></p>
+                    <p>Already have an account? <a href="signin">Sign In Here</a></p>
                 </div>
 
                 <!-- Footer -->

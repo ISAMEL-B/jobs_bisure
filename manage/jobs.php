@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Define the redirect function
 function redirectToSignin() {
-    header('Location: ../security/signin.php');
+    header('Location: ../security/signin');
     exit();
 }
 
@@ -48,7 +48,7 @@ if (isset($_GET['delete'])) {
     $id = (int) $_GET['delete'];
     $stmt = $db->prepare("DELETE FROM jobs WHERE id = ?");
     $stmt->execute([$id]);
-    header("Location: jobs.php?deleted=1");
+    header("Location: jobs?deleted=1");
     exit;
 }
 
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute($jobIds);
         }
 
-        header("Location: jobs.php?success=1");
+        header("Location: jobs?success=1");
         exit;
     }
 }
@@ -806,7 +806,7 @@ $categories = $db->query("SELECT * FROM job_categories ORDER BY name ASC")->fetc
             <div class="alert alert-info text-center p-5" style="background: var(--white); border-radius: 14px; box-shadow: var(--shadow-sm);">
                 <i class="bi bi-inbox" style="font-size: 48px; color: var(--primary);"></i>
                 <p class="mt-3 mb-0">No jobs found matching your criteria.</p>
-                <a href="jobs.php" class="btn btn-primary mt-3">Clear Filters</a>
+                <a href="jobs" class="btn btn-primary mt-3">Clear Filters</a>
             </div>
         <?php endif; ?>
 
@@ -840,6 +840,8 @@ $categories = $db->query("SELECT * FROM job_categories ORDER BY name ASC")->fetc
         <?php endif; ?>
     </form>
 </div>
+
+<?php require_once __DIR__ . '/../bars/footer.php'; ?>
 
 <script>
 // Select All functionality

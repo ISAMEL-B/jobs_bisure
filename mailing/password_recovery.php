@@ -113,17 +113,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ";
 
                 $mail->send();
-                header('Location: password_recovery.php?step=verify');
+                header('Location: password_recovery?step=verify');
                 exit;
 
             } catch (Exception $e) {
                 $_SESSION['error'] = "Failed to send verification email. Please try again.";
-                header('Location: password_recovery.php');
+                header('Location: password_recovery');
                 exit;
             }
         } else {
             $_SESSION['error'] = "No account found with that email address.";
-            header('Location: password_recovery.php');
+            header('Location: password_recovery');
             exit;
         }
     }
@@ -146,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!isset($_SESSION['verification_code']) || !isset($_SESSION['code_expiry'])) {
             $_SESSION['error'] = "Session expired. Please request a new code.";
-            header('Location: password_recovery.php');
+            header('Location: password_recovery');
             exit;
         }
 
@@ -155,17 +155,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (time() > $expiry) {
             $_SESSION['error'] = "Verification code has expired. Please request a new one.";
-            header('Location: password_recovery.php');
+            header('Location: password_recovery');
             exit;
         }
 
         if ($enteredCode === $storedCode) {
             $_SESSION['verified'] = true;
-            header('Location: password_recovery.php?step=reset');
+            header('Location: password_recovery?step=reset');
             exit;
         } else {
             $_SESSION['error'] = "Invalid verification code. Please try again.";
-            header('Location: password_recovery.php?step=verify');
+            header('Location: password_recovery?step=verify');
             exit;
         }
     }
@@ -178,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     elseif (isset($_POST['reset_password'])) {
         if (!isset($_SESSION['verified']) || !isset($_SESSION['recovery_email'])) {
-            header('Location: password_recovery.php');
+            header('Location: password_recovery');
             exit;
         }
 
@@ -187,13 +187,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($password !== $confirmPassword) {
             $_SESSION['error'] = "Passwords do not match.";
-            header('Location: password_recovery.php?step=reset');
+            header('Location: password_recovery?step=reset');
             exit;
         }
 
         if (strlen($password) < 8) {
             $_SESSION['error'] = "Password must be at least 8 characters long.";
-            header('Location: password_recovery.php?step=reset');
+            header('Location: password_recovery?step=reset');
             exit;
         }
 
@@ -210,11 +210,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['code_expiry'],
                 $_SESSION['verified']
             );
-            header('Location: ../security/signin.php');
+            header('Location: ../security/signin');
             exit;
         } else {
             $_SESSION['error'] = "Failed to update password. Please try again.";
-            header('Location: password_recovery.php?step=reset');
+            header('Location: password_recovery?step=reset');
             exit;
         }
     }
@@ -691,7 +691,7 @@ if (isset($_SESSION['code_expiry'])) {
                             <i class="bi bi-send-fill"></i> Send Verification Code
                         </button>
 
-                        <button type="button" onclick="window.location.href='../index.php'" class="btn-recovery btn-secondary">
+                        <button type="button" onclick="window.location.href='../'" class="btn-recovery btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back to Login
                         </button>
                     </form>
@@ -729,7 +729,7 @@ if (isset($_SESSION['code_expiry'])) {
                             <i class="bi bi-check-circle-fill"></i> Verify Code
                         </button>
 
-                        <button type="button" onclick="window.location.href='password_recovery.php'" class="btn-recovery btn-secondary">
+                        <button type="button" onclick="window.location.href='password_recovery'" class="btn-recovery btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back
                         </button>
                     </form>

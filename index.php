@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Define the redirect function
 function redirectToSignin() {
-    header('Location: security/signin.php');
+    header('Location: security/signin');
     exit();
 }
 
@@ -694,6 +694,8 @@ require_once __DIR__ . '/bars/head_nav.php';
 <a id="back-top" href="#" class="back-to-top" aria-label="Back to top" title="Back to top">
     <i class="bi bi-arrow-up"></i>
 </a>
+
+<?php require_once __DIR__ . '/bars/footer.php'; ?>
 
 <!-- JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

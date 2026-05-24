@@ -1585,29 +1585,7 @@ if (
 
 </div>
 
-<!-- FOOTER -->
-
-<footer>
-
-    <div class="mb-2">
-
-        © copyright <?= date('Y') ?> Uganda Job Finder  All rights reserved. <br>
-
-         Developed by <a href="https://bisure.com" target="_blank">Bisure Technollogies Co. Ltd</a>
-
-    </div>
-
-    <small>
-
-        <a href="security/signin.php">
-
-            Admin Login
-
-        </a>
-
-    </small>
-
-</footer>
+<?php require_once __DIR__ . '/bars/footer.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 

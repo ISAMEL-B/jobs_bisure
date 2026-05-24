@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Define the redirect function
 function redirectToSignin() {
-    header('Location: ../security/signin.php');
+    header('Location: ../security/signin');
     exit();
 }
 
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_category'])) {
             $stmt = $db->prepare("INSERT INTO job_categories (name, slug, keywords, icon) VALUES (?, ?, ?, ?)");
             $stmt->execute([$name, $slug, $keywords, $icon]);
             
-            header("Location: categories.php?created=1");
+            header("Location: categories?created=1");
             exit;
         }
     }
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_category'])) {
     $stmt = $db->prepare("UPDATE job_categories SET name = ?, slug = ?, keywords = ?, icon = ? WHERE id = ?");
     $stmt->execute([$name, $slug, $keywords, $icon, $id]);
     
-    header("Location: categories.php?updated=1");
+    header("Location: categories?updated=1");
     exit;
 }
 
@@ -100,7 +100,7 @@ if (isset($_GET['delete'])) {
     $stmt = $db->prepare("DELETE FROM job_categories WHERE id = ?");
     $stmt->execute([$id]);
     
-    header("Location: categories.php?deleted=1");
+    header("Location: categories?deleted=1");
     exit;
 }
 
@@ -680,7 +680,7 @@ $totalSubscribers = $db->query("SELECT COUNT(*) total FROM subscribers")->fetch(
                         <button type="submit" name="update_category" class="btn btn-primary px-4">
                             <i class="bi bi-save me-2"></i> Update Category
                         </button>
-                        <a href="categories.php" class="btn btn-light border px-4">
+                        <a href="categories" class="btn btn-light border px-4">
                             <i class="bi bi-x-circle me-2"></i> Cancel
                         </a>
                     <?php else: ?>
@@ -776,7 +776,7 @@ $totalSubscribers = $db->query("SELECT COUNT(*) total FROM subscribers")->fetch(
             <i class="bi bi-tags"></i>
             <h4>No categories found</h4>
             <p class="text-muted">No categories matched your search criteria. Try a different search term or create a new category.</p>
-            <a href="categories.php" class="btn btn-primary mt-3">Clear Filters</a>
+            <a href="categories" class="btn btn-primary mt-3">Clear Filters</a>
         </div>
     <?php endif; ?>
 
@@ -809,6 +809,8 @@ $totalSubscribers = $db->query("SELECT COUNT(*) total FROM subscribers")->fetch(
         </ul>
     <?php endif; ?>
 </div>
+
+<?php require_once __DIR__ . '/../bars/footer.php'; ?>
 
 </body>
 </html>

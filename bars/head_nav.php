@@ -750,7 +750,7 @@ if (!$siteName) {
             <div class="g-grid">
                 <!-- Logo and System Name - Left side -->
                 <div class="g-block">
-                    <a class="logo-container" href="<?= MY_BASE_URL ?>/index.php">
+                    <a class="logo-container" href="<?= MY_BASE_URL ?>/">
                         <div class="jl-logo">
                             <img src="<?= MY_BASE_URL ?>/bisure-jobs-logo.png" alt="<?= htmlspecialchars($siteName) ?>" style="height:42px;">
                         </div>
@@ -875,55 +875,55 @@ if (!$siteName) {
                     <nav class="g-main-nav">
                         <ul class="g-toplevel">
                             <li class="g-menu-item <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/index.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/">
                                     <i class="bi bi-speedometer2"></i> DASHBOARD
                                 </a>
                             </li>
 
                             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'quick_actions.php') !== false ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/scrapers/quick_actions.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/scrapers/quick_actions">
                                     <i class="bi bi-lightning-charge-fill"></i> QUICK ACTIONS
                                 </a>
                             </li>
 
                             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'users.php') !== false ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/users.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/users">
                                     <i class="bi bi-person-badge-fill"></i> SYSTEM USERS
                                 </a>
                             </li>
 
                             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'subscribe.php') !== false ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/subscribe.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/subscribe">
                                     <i class="bi bi-people-fill"></i> SUBSCRIBERS
                                 </a>
                             </li>
 
                             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'jobs.php') !== false ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/jobs.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/jobs">
                                     <i class="bi bi-briefcase-fill"></i> MANAGE JOBS
                                 </a>
                             </li>
 
                             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'categories.php') !== false ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/categories.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/categories">
                                     <i class="bi bi-folder-fill"></i> CATEGORIES
                                 </a>
                             </li>
 
                             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'settings.php') !== false ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/settings.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/settings">
                                     <i class="bi bi-gear-fill"></i> SETTINGS
                                 </a>
                             </li>
 
                             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'password_recovery.php') !== false ? 'active' : '' ?>">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/mailing/password_recovery.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/mailing/password_recovery">
                                     <i class="bi bi-shield-lock-fill"></i> CHANGE PASSWORD
                                 </a>
                             </li>
 
                             <li class="g-menu-item">
-                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/security/logout.php">
+                                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/security/logout">
                                     <i class="bi bi-box-arrow-right"></i> LOGOUT
                                 </a>
                             </li>
@@ -947,55 +947,55 @@ if (!$siteName) {
 
         <ul class="mobile-menu-items">
             <li class="g-menu-item <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/index.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/">
                     <i class="bi bi-speedometer2"></i> DASHBOARD
                 </a>
             </li>
 
             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'quick_actions.php') !== false ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/scrapers/quick_actions.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/scrapers/quick_actions">
                     <i class="bi bi-lightning-charge-fill"></i> QUICK ACTIONS
                 </a>
             </li>
 
             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'users.php') !== false ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/users.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/users">
                     <i class="bi bi-person-badge-fill"></i> SYSTEM USERS
                 </a>
             </li>
 
             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'subscribe.php') !== false ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/subscribe.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/subscribe">
                     <i class="bi bi-people-fill"></i> SUBSCRIBERS
                 </a>
             </li>
 
             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'jobs.php') !== false ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/jobs.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/jobs">
                     <i class="bi bi-briefcase-fill"></i> MANAGE JOBS
                 </a>
             </li>
 
             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'categories.php') !== false ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/categories.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/categories">
                     <i class="bi bi-folder-fill"></i> CATEGORIES
                 </a>
             </li>
 
             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'settings.php') !== false ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/settings.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/manage/settings">
                     <i class="bi bi-gear-fill"></i> SETTINGS
                 </a>
             </li>
 
             <li class="g-menu-item <?= strpos($_SERVER['PHP_SELF'], 'password_recovery.php') !== false ? 'active' : '' ?>">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/mailing/password_recovery.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/mailing/password_recovery">
                     <i class="bi bi-shield-lock-fill"></i> CHANGE PASSWORD
                 </a>
             </li>
 
             <li class="g-menu-item">
-                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/security/logout.php">
+                <a class="g-menu-item-container" href="<?= MY_BASE_URL ?>/security/logout">
                     <i class="bi bi-box-arrow-right"></i> LOGOUT
                 </a>
             </li>
